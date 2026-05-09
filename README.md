@@ -132,4 +132,4 @@ Expón el puerto del contenedor (o del host) al **cloudflared** y protege el hos
 
 ### GitHub desde el navegador (CONFIG)
 
-La app puede guardar **owner / repo / branch / PAT** en **localStorage** (CONFIG → *Apply & reload sync*) para sobrescribir los valores `VITE_*` embebidos en la imagen Docker sin reconstruir. Útil si la imagen GHCR apunta a otro repo o rama. El PAT en el navegador es datos sensibles; combínalo con Zero Trust o despliegue privado.
+La app puede guardar **owner / repo / branch / PAT** en **localStorage** (CONFIG → *Apply & reload sync*) para sobrescribir los valores `VITE_*` embebidos en la imagen Docker sin reconstruir. **`VITE_GITHUB_REPO`** debe ser solo el **nombre del repo** (p. ej. `overwatch`); si pegas la URL `https://github.com/org/repo`, el cliente la normaliza al slug. El PAT en el navegador es datos sensibles; combínalo con Zero Trust o despliegue privado.

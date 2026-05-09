@@ -285,6 +285,7 @@ export function ConfigPanel() {
             value={repo}
             onChange={setRepo}
             mono
+            hint="Slug only (overwatch). Full URLs are auto-normalized."
           />
           <Field
             label="VITE_GITHUB_BRANCH"

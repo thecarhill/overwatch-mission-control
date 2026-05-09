@@ -42,7 +42,7 @@ export function getEnvDiagnostics(): EnvDiagnosticRow[] {
     {
       key: 'VITE_GITHUB_REPO',
       present: eff.repo.trim().length > 0,
-      hint: 'Repository name (e.g. OVERWATCH)',
+      hint: 'Repo name only (e.g. overwatch) — not the full github.com URL',
       overridden: sourceForKey('repo', st),
     },
     {

@@ -1,5 +1,7 @@
 /** Browser overrides for GitHub env (localStorage). PAT is sensitive — trusted deployments only. */
 
+import { normalizeGithubOwnerRepo } from '../utils/githubNormalize'
+
 export const GITHUB_CONFIG_CHANGED_EVENT = 'overwatch-github-config'
 
 const LS_PAT = 'ow_github_pat'
@@ -79,10 +81,11 @@ export function getEffectiveGithubEnv(): EffectiveGithubEnv {
       ? String(envBr).trim()
       : undefined) ??
     'main'
+  const normalized = normalizeGithubOwnerRepo(owner, repo)
   return {
     token,
-    owner,
-    repo,
+    owner: normalized.owner,
+    repo: normalized.repo,
     branch: branch || 'main',
   }
 }
