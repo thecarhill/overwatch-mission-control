@@ -18,6 +18,7 @@ import { parseStateMd, serializeStateMd, appendSessionNote } from '../utils/pars
 import { appendInboxLine, parseInboxMd } from '../utils/parseInbox'
 import { parseProjectsMd } from '../utils/parseProjectsMd'
 import { REPO_PATHS } from '../utils/constants'
+import { GITHUB_CONFIG_CHANGED_EVENT } from '../services/runtimeGithubConfig'
 import type {
   ActivityLogEntry,
   InboxEntry,
@@ -246,12 +247,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const slugs = await resolveProjectSlugs()
     const cards: ProjectCard[] = []
     const cache: Record<string, StateCacheEntry> = {}
+    const missingState: string[] = []
 
     await Promise.all(
       slugs.map(async ({ slug, nameHint }, idx) => {
         const path = `${REPO_PATHS.projectsDir}/${slug}/state.md`
         const f = await getTextFile(path)
-        if (!f) return
+        if (!f) {
+          missingState.push(slug)
+          return
+        }
         const parsed = parseStateMd(f.content, slug)
         cache[slug] = { parsed, sha: f.sha }
         const sessions = parsed.sessionLog
@@ -280,7 +285,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     cards.sort((a, b) => a.displayId.localeCompare(b.displayId))
     setStateCache((prev) => ({ ...prev, ...cache }))
     setProjectCards(cards)
-  }, [])
+
+    if (cards.length === 0 && missingState.length > 0) {
+      showError(
+        `No project cards: missing ${REPO_PATHS.projectsDir}/{${missingState.slice(0, 5).join(', ')}}${missingState.length > 5 ? ', …' : ''}/state.md`,
+      )
+    } else if (missingState.length > 0) {
+      pushActivity({
+        category: 'SYNC',
+        message: `Skipped ${missingState.length} slug(s) without state.md: ${missingState.slice(0, 6).join(', ')}${missingState.length > 6 ? '…' : ''}`,
+      })
+    }
+  }, [pushActivity, showError])
 
   const refreshAll = useCallback(async () => {
     setLoading(true)
@@ -307,6 +323,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void refreshAll()
   }, [refreshAll])
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    const onCfg = () => void refreshAll()
+    window.addEventListener(GITHUB_CONFIG_CHANGED_EVENT, onCfg)
+    return () => window.removeEventListener(GITHUB_CONFIG_CHANGED_EVENT, onCfg)
+  }, [refreshAll])
 
   const wipName = useMemo(() => {
     const w = projectCards.find((p) => p.status === 'WIP')

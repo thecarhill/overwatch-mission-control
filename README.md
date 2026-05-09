@@ -127,3 +127,9 @@ Portainer clona el repo y ejecuta **`docker compose build`**: no hay pull de GHC
 ### Cloudflare Tunnel + Zero Trust
 
 Expón el puerto del contenedor (o del host) al **cloudflared** y protege el hostname con **Cloudflare Access** (política email/OTP). El PAT sigue en el bundle del navegador; Access reduce superficie de ataque frente a Internet abierto.
+
+**Zero Trust en `overwatch.carceller.cc` (resumen):** en Zero Trust → **Access** → **Applications** → *Add an application* → tipo **Self-hosted**, dominio `overwatch.carceller.cc`. Crea una **policy** con acción *Allow*, criterio **Emails** (o **Emails ending in**) e incluye tu email de admin. Coloca esa policy por encima de cualquier *Deny*. Con Traefik delante no suele ser necesario tocar el origen del túnel salvo que uses hostname distinto en cloudflared.
+
+### GitHub desde el navegador (CONFIG)
+
+La app puede guardar **owner / repo / branch / PAT** en **localStorage** (CONFIG → *Apply & reload sync*) para sobrescribir los valores `VITE_*` embebidos en la imagen Docker sin reconstruir. Útil si la imagen GHCR apunta a otro repo o rama. El PAT en el navegador es datos sensibles; combínalo con Zero Trust o despliegue privado.

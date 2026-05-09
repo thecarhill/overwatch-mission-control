@@ -1,4 +1,11 @@
 import { useState } from 'react'
+import {
+  clearStoredGithub,
+  getEffectiveGithubEnv,
+  notifyGithubConfigChanged,
+  readStoredGithub,
+  writeStoredGithub,
+} from '../../services/runtimeGithubConfig'
 import { verifyGitHubPat } from '../../services/github'
 import { Btn } from '../primitives/Btn'
 import { Rule } from '../primitives/Rule'
@@ -14,6 +21,11 @@ export function ConfigPanel() {
   const { mode, setMode, accent, setAccent, accentPresets } = useThemeConfig()
   const [hexInput, setHexInput] = useState(accent)
 
+  const [owner, setOwner] = useState(() => getEffectiveGithubEnv().owner)
+  const [repo, setRepo] = useState(() => getEffectiveGithubEnv().repo)
+  const [branch, setBranch] = useState(() => getEffectiveGithubEnv().branch)
+  const [pat, setPat] = useState('')
+
   const [patStatus, setPatStatus] = useState<
     | { state: 'idle' }
     | { state: 'loading' }
@@ -21,8 +33,14 @@ export function ConfigPanel() {
     | { state: 'err'; msg: string }
   >({ state: 'idle' })
 
+  const [applyMsg, setApplyMsg] = useState<string | null>(null)
+
   const envRows = getEnvDiagnostics()
   const envOk = envAllPresent()
+  const stStored = readStoredGithub()
+  const hasBrowserOverrides = Boolean(
+    stStored.pat || stStored.owner || stStored.repo || stStored.branch,
+  )
 
   const runPatCheck = async () => {
     setPatStatus({ state: 'loading' })
@@ -32,6 +50,37 @@ export function ConfigPanel() {
     } else {
       setPatStatus({ state: 'err', msg: r.error ?? 'Unknown error' })
     }
+  }
+
+  const handleApply = () => {
+    const o = owner.trim()
+    const r = repo.trim()
+    if (!o || !r) {
+      setApplyMsg('Owner and repo are required.')
+      return
+    }
+    writeStoredGithub({
+      owner: o,
+      repo: r,
+      branch: branch.trim() || undefined,
+      pat: pat.trim() || undefined,
+    })
+    setApplyMsg('Saved in this browser. Syncing…')
+    setPat('')
+    notifyGithubConfigChanged()
+    window.setTimeout(() => setApplyMsg(null), 4000)
+  }
+
+  const handleClearOverrides = () => {
+    clearStoredGithub()
+    const build = getEffectiveGithubEnv()
+    setOwner(build.owner)
+    setRepo(build.repo)
+    setBranch(build.branch)
+    setPat('')
+    setApplyMsg('Browser overrides cleared. Syncing…')
+    notifyGithubConfigChanged()
+    window.setTimeout(() => setApplyMsg(null), 4000)
   }
 
   return (
@@ -55,7 +104,7 @@ export function ConfigPanel() {
           CONFIG
         </h1>
         <SysLabel style={{ color: T.muted, display: 'block', marginTop: 10 }}>
-          APPEARANCE // INTEGRITY CHECKS
+          APPEARANCE // GITHUB (BUILD + BROWSER)
         </SysLabel>
       </div>
 
@@ -160,13 +209,13 @@ export function ConfigPanel() {
         </div>
 
         <SysLabel style={{ display: 'block', marginBottom: 12 }}>
-          BUILD / .ENV (VITE)
+          GITHUB — BUILD DEFAULT + BROWSER OVERRIDES
         </SysLabel>
         <div
           style={{
             border: `1px solid ${T.border}`,
             padding: 0,
-            marginBottom: 28,
+            marginBottom: 16,
           }}
         >
           <div
@@ -178,7 +227,8 @@ export function ConfigPanel() {
             }}
           >
             <SysLabel style={{ color: 'inherit', fontSize: 10 }}>
-              VARIABLES BAKED AT BUILD TIME — RESTART DEV SERVER AFTER EDITING .ENV
+              CI/CD BAKES VITE_* INTO THE BUNDLE — BELOW OVERRIDES ONLY THIS BROWSER (
+              LOCALSTORAGE )
             </SysLabel>
           </div>
           {envRows.map((row) => (
@@ -196,6 +246,9 @@ export function ConfigPanel() {
               <div>
                 <div style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700 }}>
                   {row.key}
+                  {row.overridden ? (
+                    <span style={{ color: T.muted, fontWeight: 400 }}> · browser</span>
+                  ) : null}
                 </div>
                 {row.hint && (
                   <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>
@@ -203,7 +256,7 @@ export function ConfigPanel() {
                   </div>
                 )}
               </div>
-              <EnvFlag ok={row.present} />
+              <EnvFlag ok={row.present} overridden={row.overridden} />
             </div>
           ))}
           <div style={{ padding: '12px 16px', fontFamily: T.mono, fontSize: 11 }}>
@@ -212,8 +265,74 @@ export function ConfigPanel() {
           </div>
         </div>
 
+        <div
+          style={{
+            border: `1px solid ${T.border}`,
+            padding: 16,
+            marginBottom: 24,
+            display: 'grid',
+            gap: 12,
+          }}
+        >
+          <Field
+            label="VITE_GITHUB_OWNER"
+            value={owner}
+            onChange={setOwner}
+            mono
+          />
+          <Field
+            label="VITE_GITHUB_REPO"
+            value={repo}
+            onChange={setRepo}
+            mono
+          />
+          <Field
+            label="VITE_GITHUB_BRANCH"
+            value={branch}
+            onChange={setBranch}
+            mono
+            hint="Empty uses main when not set in build"
+          />
+          <div>
+            <SysLabel style={{ color: T.muted, display: 'block', marginBottom: 6 }}>
+              VITE_GITHUB_PAT (optional override)
+            </SysLabel>
+            <input
+              type="password"
+              autoComplete="off"
+              value={pat}
+              onChange={(e) => setPat(e.target.value)}
+              placeholder="Leave blank to keep build token or previous override"
+              style={{
+                fontFamily: T.mono,
+                fontSize: 12,
+                padding: '10px 12px',
+                border: `1px solid ${T.border}`,
+                width: '100%',
+                background: 'transparent',
+                color: T.paper,
+              }}
+            />
+            <div style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>
+              Saving with an empty PAT removes a browser PAT override (falls back to the image
+              build).
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+            <Btn inverted onClick={handleApply}>
+              APPLY & RELOAD SYNC
+            </Btn>
+            <Btn onClick={handleClearOverrides} disabled={!hasBrowserOverrides}>
+              CLEAR BROWSER OVERRIDES
+            </Btn>
+          </div>
+          {applyMsg && (
+            <div style={{ fontFamily: T.mono, fontSize: 11, color: T.paper }}>{applyMsg}</div>
+          )}
+        </div>
+
         <SysLabel style={{ display: 'block', marginBottom: 12 }}>
-          GITHUB PAT
+          GITHUB PAT — VERIFY
         </SysLabel>
         <div
           style={{
@@ -224,9 +343,8 @@ export function ConfigPanel() {
         >
           <p style={{ margin: '0 0 16px', fontSize: 13, lineHeight: 1.6, color: T.muted }}>
             Calls{' '}
-            <span style={{ fontFamily: T.mono, fontSize: 12 }}>GET /user</span> with{' '}
-            <span style={{ fontFamily: T.mono, fontSize: 12 }}>VITE_GITHUB_PAT</span>.
-            Token value is never shown.
+            <span style={{ fontFamily: T.mono, fontSize: 12 }}>GET /user</span> with the{' '}
+            <strong>effective</strong> PAT (build or browser override). Token value is never shown.
           </p>
           <Btn inverted onClick={() => void runPatCheck()} disabled={patStatus.state === 'loading'}>
             {patStatus.state === 'loading' ? 'CHECKING...' : 'VERIFY PAT'}
@@ -250,7 +368,53 @@ export function ConfigPanel() {
   )
 }
 
-function EnvFlag({ ok }: { ok: boolean }) {
+function Field({
+  label,
+  value,
+  onChange,
+  mono,
+  hint,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  mono?: boolean
+  hint?: string
+}) {
+  return (
+    <div>
+      <SysLabel style={{ color: T.muted, display: 'block', marginBottom: 6 }}>
+        {label}
+      </SysLabel>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          fontFamily: mono ? T.mono : T.sans,
+          fontSize: 13,
+          padding: '10px 12px',
+          border: `1px solid ${T.border}`,
+          width: '100%',
+          background: 'transparent',
+          color: T.paper,
+        }}
+      />
+      {hint && (
+        <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>{hint}</div>
+      )}
+    </div>
+  )
+}
+
+function EnvFlag({
+  ok,
+  overridden,
+}: {
+  ok: boolean
+  overridden?: boolean
+}) {
+  let label = 'MISSING'
+  if (ok) label = overridden ? 'OVERRIDE' : 'SET'
   return (
     <span
       style={{
@@ -265,7 +429,7 @@ function EnvFlag({ ok }: { ok: boolean }) {
         color: ok ? T.onAccent : T.muted,
       }}
     >
-      {ok ? 'SET' : 'MISSING'}
+      {label}
     </span>
   )
 }

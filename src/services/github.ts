@@ -1,3 +1,8 @@
+import {
+  getEffectiveGithubEnv,
+  githubEnvReady,
+} from './runtimeGithubConfig'
+
 const API = 'https://api.github.com'
 
 /** Validates PAT against GET /user (no repo env required). */
@@ -6,9 +11,12 @@ export async function verifyGitHubPat(): Promise<{
   login?: string
   error?: string
 }> {
-  const token = import.meta.env.VITE_GITHUB_PAT
+  const { token } = getEffectiveGithubEnv()
   if (!token || String(token).trim().length === 0) {
-    return { ok: false, error: 'VITE_GITHUB_PAT is missing in this build' }
+    return {
+      ok: false,
+      error: 'No PAT: set VITE_GITHUB_PAT at build or save one in CONFIG',
+    }
   }
   try {
     const res = await fetch(`${API}/user`, {
@@ -48,16 +56,13 @@ export class GitHubApiError extends Error {
 }
 
 function env() {
-  const token = import.meta.env.VITE_GITHUB_PAT
-  const owner = import.meta.env.VITE_GITHUB_OWNER
-  const repo = import.meta.env.VITE_GITHUB_REPO
-  const branch = import.meta.env.VITE_GITHUB_BRANCH ?? 'main'
-  if (!token || !owner || !repo) {
+  const e = getEffectiveGithubEnv()
+  if (!githubEnvReady(e)) {
     throw new Error(
-      'Missing VITE_GITHUB_PAT, VITE_GITHUB_OWNER, or VITE_GITHUB_REPO',
+      'Missing GitHub config: PAT, owner, or repo (build-time VITE_* or CONFIG overrides)',
     )
   }
-  return { token, owner, repo, branch }
+  return { token: e.token, owner: e.owner, repo: e.repo, branch: e.branch }
 }
 
 function headers(): HeadersInit {

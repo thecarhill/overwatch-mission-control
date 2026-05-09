@@ -7,7 +7,8 @@ import type { ProjectRegistryRow } from '../types'
  */
 export function parseProjectsMd(content: string): ProjectRegistryRow[] {
   const out: ProjectRegistryRow[] = []
-  for (let line of content.split('\n')) {
+  const body = content.replace(/^\uFEFF/, '')
+  for (let line of body.split('\n')) {
     line = line.trim()
     if (!line || line.startsWith('#')) continue
 

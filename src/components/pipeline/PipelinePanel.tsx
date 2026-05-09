@@ -12,11 +12,27 @@ import {
 import type { Lead, Stage } from '../../types'
 import { STAGES } from '../../utils/constants'
 import { useApp } from '../../context/useApp'
+import { Btn } from '../primitives/Btn'
 import { SysLabel } from '../primitives/SysLabel'
 import { T } from '../../theme/tokens'
+import { LeadDetail } from '../leads/LeadDetail'
+import { LeadsDataTable } from '../leads/LeadsDataTable'
+
+type PipelineView = 'board' | 'table'
 
 export function PipelinePanel() {
-  const { leads, leadsLoading, setLeadStage, openLeadDetail } = useApp()
+  const {
+    leads,
+    leadsLoading,
+    leadDetailId,
+    openLeadDetail,
+    closeLeadDetail,
+    updateLead,
+    deleteLead,
+    setLeadStage,
+  } = useApp()
+
+  const [view, setView] = useState<PipelineView>('board')
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -43,6 +59,20 @@ export function PipelinePanel() {
     setLeadStage(activeId, targetStage)
   }
 
+  const lead = leadDetailId ? leads.find((l) => l.id === leadDetailId) : undefined
+
+  if (leadDetailId && lead) {
+    return (
+      <LeadDetail
+        lead={lead}
+        onBack={() => closeLeadDetail()}
+        onChange={(patch) => updateLead(lead.id, patch)}
+        onDelete={() => deleteLead(lead.id)}
+        onStageChange={(stage) => setLeadStage(lead.id, stage)}
+      />
+    )
+  }
+
   if (leadsLoading && leads.length === 0) {
     return (
       <div style={{ padding: 32, fontFamily: T.mono, fontSize: 11 }}>
@@ -52,19 +82,20 @@ export function PipelinePanel() {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragEnd={handleDragEnd}
-    >
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div
-          style={{
-            padding: '24px 32px',
-            borderBottom: `1px solid ${T.border}`,
-            flexShrink: 0,
-          }}
-        >
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div
+        style={{
+          padding: '24px 32px',
+          borderBottom: `1px solid ${T.border}`,
+          flexShrink: 0,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+          gap: 16,
+        }}
+      >
+        <div>
           <h1
             style={{
               fontSize: 'clamp(36px, 5vw, 56px)',
@@ -81,34 +112,60 @@ export function PipelinePanel() {
             FUNNEL VIEW
           </SysLabel>
         </div>
-        <div
-          style={{
-            flex: 1,
-            overflowX: 'auto',
-            overflowY: 'auto',
-            padding: 32,
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${STAGES.length}, minmax(160px, 1fr))`,
-              gap: 12,
-              minWidth: 800,
-            }}
-          >
-            {stageColumns.map((st) => (
-              <PipelineColumn
-                key={st.name}
-                stage={st.name}
-                items={st.items}
-                onCardClick={(id) => openLeadDetail(id)}
-              />
-            ))}
-          </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Btn inverted={view === 'board'} onClick={() => setView('board')}>
+            BOARD
+          </Btn>
+          <Btn inverted={view === 'table'} onClick={() => setView('table')}>
+            TABLE
+          </Btn>
         </div>
       </div>
-    </DndContext>
+
+      {view === 'table' ? (
+        <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+          <SysLabel style={{ display: 'block', marginBottom: 16, color: T.muted }}>
+            Same grid as LEADS_CRM — click a row to edit fields.
+          </SysLabel>
+          <LeadsDataTable leads={leads} onOpenLead={openLeadDetail} />
+        </div>
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragEnd={handleDragEnd}
+        >
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                flex: 1,
+                overflowX: 'auto',
+                overflowY: 'auto',
+                padding: 32,
+              }}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${STAGES.length}, minmax(160px, 1fr))`,
+                  gap: 12,
+                  minWidth: 800,
+                }}
+              >
+                {stageColumns.map((st) => (
+                  <PipelineColumn
+                    key={st.name}
+                    stage={st.name}
+                    items={st.items}
+                    onCardClick={(id) => openLeadDetail(id)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </DndContext>
+      )}
+    </div>
   )
 }
 
