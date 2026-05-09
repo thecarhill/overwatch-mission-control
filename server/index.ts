@@ -5,6 +5,7 @@ import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { openDb } from './db.js'
 import { upsertFile } from './fileStore.js'
+import { seedProjectsIfEmpty } from './seedProjects.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -95,6 +96,7 @@ const port = parseInt(process.env.PORT || '8080', 10)
 let db: ReturnType<typeof openDb>
 try {
   db = openDb()
+  seedProjectsIfEmpty(db)
 } catch (err) {
   console.error('[overwatch] Failed to open SQLite:', err)
   process.exit(1)

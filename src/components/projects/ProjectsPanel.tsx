@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { useApp } from '../../context/useApp'
 import { Btn } from '../primitives/Btn'
 import { SysLabel } from '../primitives/SysLabel'
 import { Tag } from '../primitives/Tag'
 import { T } from '../../theme/tokens'
+import { slugifyProject } from '../../utils/projectSlug'
 import { ProjectDetail } from './ProjectDetail'
 import { WipModal } from './WipModal'
 
@@ -20,9 +21,13 @@ export function ProjectsPanel() {
     prepareWipToggle,
     executeWipSwap,
     syncing,
+    createProject,
   } = useApp()
 
   const [hoverId, setHoverId] = useState<string | null>(null)
+  const [newName, setNewName] = useState('')
+  const [slugEdited, setSlugEdited] = useState(false)
+  const [customSlug, setCustomSlug] = useState('')
   const [wipModal, setWipModal] = useState<{
     parkSlug: string
     activateSlug: string
@@ -51,6 +56,30 @@ export function ProjectsPanel() {
       return
     }
     await saveProjectState(slug, { ...draft, status: plan.newStatus })
+  }
+
+  const derivedSlug = slugifyProject(newName)
+  const slugFieldValue = slugEdited ? customSlug : derivedSlug
+
+  const handleCreateProject = async () => {
+    await createProject({
+      name: newName,
+      slug: slugEdited ? customSlug : undefined,
+    })
+    setNewName('')
+    setSlugEdited(false)
+    setCustomSlug('')
+  }
+
+  const inputStyle: CSSProperties = {
+    fontFamily: T.mono,
+    fontSize: 11,
+    padding: '8px 10px',
+    border: `1px solid ${T.border}`,
+    background: 'transparent',
+    color: T.paper,
+    width: '100%',
+    boxSizing: 'border-box',
   }
 
   if (projectsLoading && projectCards.length === 0) {
@@ -111,6 +140,8 @@ export function ProjectsPanel() {
           justifyContent: 'space-between',
           alignItems: 'flex-end',
           flexShrink: 0,
+          flexWrap: 'wrap',
+          gap: 20,
         }}
       >
         <div>
@@ -129,6 +160,47 @@ export function ProjectsPanel() {
             SOURCE: SERVER SQLITE // {projectCards.length} REGISTERED
           </SysLabel>
         </div>
+        <form
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            minWidth: 260,
+            maxWidth: 360,
+          }}
+          onSubmit={(e) => {
+            e.preventDefault()
+            void handleCreateProject()
+          }}
+        >
+          <SysLabel style={{ fontSize: 9, color: T.muted }}>
+            NEW PROJECT
+          </SysLabel>
+          <input
+            style={inputStyle}
+            placeholder="Display name"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            autoComplete="off"
+          />
+          <input
+            style={inputStyle}
+            placeholder="slug-from-name"
+            value={slugFieldValue}
+            onChange={(e) => {
+              setSlugEdited(true)
+              setCustomSlug(e.target.value)
+            }}
+            autoComplete="off"
+          />
+          <Btn
+            type="submit"
+            disabled={syncing || !newName.trim()}
+            full
+          >
+            CREATE PROJECT
+          </Btn>
+        </form>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
         <div

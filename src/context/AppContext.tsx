@@ -18,6 +18,7 @@ import { parseStateMd, serializeStateMd, appendSessionNote } from '../utils/pars
 import { appendInboxLine, parseInboxMd } from '../utils/parseInbox'
 import { parseProjectsMd } from '../utils/parseProjectsMd'
 import { REPO_PATHS } from '../utils/constants'
+import { slugifyProject } from '../utils/projectSlug'
 import type {
   ActivityLogEntry,
   InboxEntry,
@@ -95,6 +96,10 @@ interface AppContextValue {
     parsed: ParsedState,
     opts?: { sessionNote?: string },
   ) => Promise<void>
+  createProject: (payload: {
+    name: string
+    slug?: string
+  }) => Promise<void>
   /** Toggle WIP: parks other WIP via modal flow inside caller */
   prepareWipToggle: (
     slug: string,
@@ -467,6 +472,77 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }, [showError])
 
+  const createProject = useCallback(
+    async (payload: { name: string; slug?: string }) => {
+      const name = payload.name.trim()
+      if (!name) {
+        showError('Project name required')
+        return
+      }
+      const slug = slugifyProject(payload.slug?.trim() || name)
+      if (slug.length < 2) {
+        showError('Slug needs at least 2 characters (a-z, 0-9, hyphen)')
+        return
+      }
+      const path = `${REPO_PATHS.projectsDir}/${slug}/state.md`
+      try {
+        setSyncing(true)
+        const existing = await getTextFile(path)
+        if (existing) {
+          showError(`Project slug already exists: ${slug}`)
+          return
+        }
+        const initial: ParsedState = {
+          projectName: name,
+          status: 'BACKLOG',
+          priority: '03_STANDARD',
+          currentTask: '',
+          nextAction: '',
+          blocker: '',
+          parkingLot: [],
+          sessionLog: [
+            {
+              date: todayIso(),
+              note: 'Project created from PROJECTS panel',
+            },
+          ],
+        }
+        await putTextFile(
+          path,
+          serializeStateMd(initial),
+          `overwatch: create project ${slug}`,
+          undefined,
+        )
+        const reg = await getTextFile(REPO_PATHS.projectsMd)
+        const line = `- ${slug} — ${name}`
+        let nextMd = reg?.content ?? '# PROJECTS\n'
+        if (!nextMd.includes(line)) {
+          nextMd = `${nextMd.trimEnd()}\n\n${line}\n`
+        }
+        await putTextFile(
+          REPO_PATHS.projectsMd,
+          nextMd,
+          'overwatch: registry append',
+          reg?.sha,
+        )
+        await loadProjects()
+        pushActivity({
+          category: 'PROJECT',
+          message: `Created project ${slug}`,
+        })
+        setProjectDetailSlug(slug)
+        await loadProjectState(slug)
+      } catch (err) {
+        const m =
+          err instanceof RepoApiError ? err.message : String(err)
+        showError(m)
+      } finally {
+        setSyncing(false)
+      }
+    },
+    [loadProjectState, loadProjects, pushActivity, showError],
+  )
+
   const saveProjectState = useCallback(
     async (
       slug: string,
@@ -662,6 +738,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getProjectState,
     loadProjectState,
     saveProjectState,
+    createProject,
     prepareWipToggle,
     executeWipSwap,
     refreshAll,
