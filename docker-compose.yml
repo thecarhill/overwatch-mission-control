@@ -1,15 +1,10 @@
+# Portainer / despliegue genérico: imagen desde GHCR + puerto publicado.
+# (La versión con Traefik + red externa `web` está en docker-compose.traefik.yml)
+
 services:
   overwatch:
-    build: .
+    image: ghcr.io/thecarhill/overwatch-mission-control:latest
+    pull_policy: always
     restart: unless-stopped
-    networks:
-      - web
-    labels:
-      - 'traefik.enable=true'
-      - 'traefik.http.routers.overwatch.rule=Host(`overwatch.carceller.cc`)'
-      - 'traefik.http.routers.overwatch.entrypoints=websecure'
-      - 'traefik.http.routers.overwatch.tls.certresolver=letsencrypt'
-
-networks:
-  web:
-    external: true
+    ports:
+      - "${OVERWATCH_PORT:-8080}:80"

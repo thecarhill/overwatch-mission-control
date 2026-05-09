@@ -1,0 +1,20 @@
+# Opcional: NUC con Traefik ya corriendo y red Docker `web` creada:
+#   docker network create web
+# Desplegar con: docker compose -f docker-compose.traefik.yml up -d
+
+services:
+  overwatch:
+    image: ghcr.io/thecarhill/overwatch-mission-control:latest
+    pull_policy: always
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.overwatch.rule=Host(`overwatch.carceller.cc`)'
+      - 'traefik.http.routers.overwatch.entrypoints=websecure'
+      - 'traefik.http.routers.overwatch.tls.certresolver=letsencrypt'
+
+networks:
+  web:
+    external: true

@@ -76,6 +76,16 @@ En el repo está [`.github/workflows/docker-ghcr.yml`](./.github/workflows/docke
 
 Tras un push a `main`, en **Packages** del usuario/org aparecerá el contenedor. En Portainer: imagen `ghcr.io/thecarhill/overwatch-mission-control:latest`, con login a GHCR si el paquete es privado (`docker login ghcr.io` con PAT que tenga `read:packages`).
 
+### Portainer (stack desde Git)
+
+Usa **`docker-compose.yml`** en la raíz (imagen **GHCR**, puerto **8080→80**).
+
+1. **Registry GHCR** (si el paquete es privado): en Portainer → **Registries** → añade `ghcr.io`, usuario GitHub y PAT con `read:packages`.
+2. La variable **`VITE_GITHUB_PAT` en el formulario del stack no cambia el bundle** si usas la imagen precompilada: el token ya va dentro del JS construido en Actions. Solo sirve si montas un compose que haga **`build`** con `args` (no es el caso del compose por defecto).
+3. Si antes fallaba el deploy: el compose antiguo tenía **`networks.web.external: true`** sin crear la red `web` en el host → error típico. El `docker-compose.yml` actual ya no lo exige.
+
+Para Traefik + red `web`, usa **`docker-compose.traefik.yml`** como *Compose path* (y crea antes `docker network create web`).
+
 ### Cloudflare Tunnel + Zero Trust
 
 Expón el puerto del contenedor (o del host) al **cloudflared** y protege el hostname con **Cloudflare Access** (política email/OTP). El PAT sigue en el bundle del navegador; Access reduce superficie de ataque frente a Internet abierto.
