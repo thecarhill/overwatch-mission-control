@@ -1,6 +1,11 @@
 /** Mirrors app `ParsedState` / `serializeStateMd` for server-side seeds only. */
 
-export type ProjectStatus = 'WIP' | 'PARKED' | 'BACKLOG' | 'KILLED'
+export type ProjectStatus =
+  | 'WIP'
+  | 'PARKED'
+  | 'BACKLOG'
+  | 'DONE'
+  | 'KILLED'
 export type Priority =
   | '01_CRITICAL'
   | '02_HIGH'

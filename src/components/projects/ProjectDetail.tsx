@@ -14,7 +14,13 @@ const PRIORITIES: Priority[] = [
   '04_BACKLOG',
 ]
 
-const STATUSES: ProjectStatus[] = ['WIP', 'PARKED', 'BACKLOG', 'KILLED']
+const STATUSES: ProjectStatus[] = [
+  'WIP',
+  'PARKED',
+  'BACKLOG',
+  'DONE',
+  'KILLED',
+]
 
 export function ProjectDetail({
   displayId,

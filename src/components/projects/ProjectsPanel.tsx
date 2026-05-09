@@ -251,6 +251,7 @@ export function ProjectsPanel() {
               <tbody>
                 {projectCards.map((p) => {
                   const killed = p.status === 'KILLED'
+                  const done = p.status === 'DONE'
                   return (
                   <tr
                     key={p.slug}
@@ -260,15 +261,17 @@ export function ProjectsPanel() {
                     style={{
                       borderBottom: `1px solid ${T.borderDim}`,
                       cursor: 'pointer',
-                      opacity: killed ? 0.7 : 1,
+                      opacity: killed ? 0.7 : done ? 0.88 : 1,
                       background:
                         p.status === 'WIP'
                           ? T.paper
                           : killed
                             ? 'rgba(160, 60, 60, 0.06)'
-                            : hoverId === p.slug
-                              ? 'rgba(0,0,0,0.04)'
-                              : 'transparent',
+                            : done
+                              ? 'rgba(40, 120, 70, 0.08)'
+                              : hoverId === p.slug
+                                ? 'rgba(0,0,0,0.04)'
+                                : 'transparent',
                       color: p.status === 'WIP' ? T.void : T.paper,
                     }}
                   >
@@ -296,24 +299,33 @@ export function ProjectsPanel() {
               paddingBottom: 8,
             }}
           >
-            {(['BACKLOG', 'PARKED', 'WIP', 'KILLED'] as const).map((col) => (
+            {(['BACKLOG', 'PARKED', 'WIP', 'DONE', 'KILLED'] as const).map((col) => (
               <div
                 key={col}
                 style={{
-                  flex: '1 1 260px',
-                  minWidth: 240,
-                  maxWidth: 360,
+                  flex: '1 1 240px',
+                  minWidth: 220,
+                  maxWidth: 340,
                   border:
                     col === 'KILLED'
                       ? `1px solid rgba(180, 70, 70, 0.45)`
-                      : `1px solid ${T.border}`,
+                      : col === 'DONE'
+                        ? `1px solid rgba(50, 140, 90, 0.5)`
+                        : `1px solid ${T.border}`,
                   padding: 12,
                   background:
-                    col === 'KILLED' ? 'rgba(120, 40, 40, 0.06)' : 'rgba(0,0,0,0.02)',
+                    col === 'KILLED'
+                      ? 'rgba(120, 40, 40, 0.06)'
+                      : col === 'DONE'
+                        ? 'rgba(30, 90, 55, 0.07)'
+                        : 'rgba(0,0,0,0.02)',
                 }}
               >
                 <SysLabel style={{ display: 'block', marginBottom: 12 }}>
                   {col}
+                  {col === 'DONE' ? (
+                    <span style={{ fontWeight: 400, color: T.muted }}> — completed</span>
+                  ) : null}
                   {col === 'KILLED' ? (
                     <span style={{ fontWeight: 400, color: T.muted }}> — cancelled</span>
                   ) : null}{' '}
@@ -325,6 +337,7 @@ export function ProjectsPanel() {
                     .map((p) => {
                       const isWip = p.status === 'WIP'
                       const isKilled = p.status === 'KILLED'
+                      const isDone = p.status === 'DONE'
                       const hov = hoverId === p.slug
                       return (
                         <div
@@ -334,18 +347,24 @@ export function ProjectsPanel() {
                           onMouseLeave={() => setHoverId(null)}
                           style={{
                             border: `1px solid ${
-                              isKilled ? 'rgba(180, 70, 70, 0.35)' : T.border
+                              isKilled
+                                ? 'rgba(180, 70, 70, 0.35)'
+                                : isDone
+                                  ? 'rgba(50, 140, 90, 0.45)'
+                                  : T.border
                             }`,
                             padding: 16,
                             cursor: 'pointer',
-                            opacity: isKilled ? 0.82 : 1,
+                            opacity: isKilled ? 0.82 : isDone ? 0.92 : 1,
                             background: isWip
                               ? T.paper
                               : isKilled
                                 ? 'rgba(90, 30, 30, 0.07)'
-                                : hov
-                                  ? 'rgba(0,0,0,0.06)'
-                                  : T.void,
+                                : isDone
+                                  ? 'rgba(25, 80, 50, 0.09)'
+                                  : hov
+                                    ? 'rgba(0,0,0,0.06)'
+                                    : T.void,
                             color: isWip ? T.void : T.paper,
                           }}
                         >

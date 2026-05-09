@@ -133,7 +133,7 @@ export function seedProjectsIfEmpty(db: Database.Database): void {
       slug: 'ant-mission-manager',
       state: {
         projectName: 'ant-mission-manager',
-        status: 'BACKLOG',
+        status: 'DONE',
         priority: '03_STANDARD',
         currentTask:
           'Flask: misiones y benchmarks ANT (BlueBotics AGV), colas, import CSV/Excel — entregado (DONE en inventario overwatch).',
