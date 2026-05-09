@@ -1,4 +1,4 @@
-export type ProjectStatus = 'WIP' | 'PARKED' | 'BACKLOG'
+export type ProjectStatus = 'WIP' | 'PARKED' | 'BACKLOG' | 'KILLED'
 
 export type Priority =
   | '01_CRITICAL'

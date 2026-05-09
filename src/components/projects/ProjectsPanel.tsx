@@ -249,7 +249,9 @@ export function ProjectsPanel() {
                 </tr>
               </thead>
               <tbody>
-                {projectCards.map((p) => (
+                {projectCards.map((p) => {
+                  const killed = p.status === 'KILLED'
+                  return (
                   <tr
                     key={p.slug}
                     onClick={() => void handleOpen(p.slug)}
@@ -258,12 +260,15 @@ export function ProjectsPanel() {
                     style={{
                       borderBottom: `1px solid ${T.borderDim}`,
                       cursor: 'pointer',
+                      opacity: killed ? 0.7 : 1,
                       background:
                         p.status === 'WIP'
                           ? T.paper
-                          : hoverId === p.slug
-                            ? 'rgba(0,0,0,0.04)'
-                            : 'transparent',
+                          : killed
+                            ? 'rgba(160, 60, 60, 0.06)'
+                            : hoverId === p.slug
+                              ? 'rgba(0,0,0,0.04)'
+                              : 'transparent',
                       color: p.status === 'WIP' ? T.void : T.paper,
                     }}
                   >
@@ -276,7 +281,8 @@ export function ProjectsPanel() {
                       {p.blocker || p.nextPreview || '—'}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -290,26 +296,35 @@ export function ProjectsPanel() {
               paddingBottom: 8,
             }}
           >
-            {(['BACKLOG', 'PARKED', 'WIP'] as const).map((col) => (
+            {(['BACKLOG', 'PARKED', 'WIP', 'KILLED'] as const).map((col) => (
               <div
                 key={col}
                 style={{
                   flex: '1 1 260px',
                   minWidth: 240,
                   maxWidth: 360,
-                  border: `1px solid ${T.border}`,
+                  border:
+                    col === 'KILLED'
+                      ? `1px solid rgba(180, 70, 70, 0.45)`
+                      : `1px solid ${T.border}`,
                   padding: 12,
-                  background: 'rgba(0,0,0,0.02)',
+                  background:
+                    col === 'KILLED' ? 'rgba(120, 40, 40, 0.06)' : 'rgba(0,0,0,0.02)',
                 }}
               >
                 <SysLabel style={{ display: 'block', marginBottom: 12 }}>
-                  {col} ({projectCards.filter((x) => x.status === col).length})
+                  {col}
+                  {col === 'KILLED' ? (
+                    <span style={{ fontWeight: 400, color: T.muted }}> — cancelled</span>
+                  ) : null}{' '}
+                  ({projectCards.filter((x) => x.status === col).length})
                 </SysLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {projectCards
                     .filter((p) => p.status === col)
                     .map((p) => {
                       const isWip = p.status === 'WIP'
+                      const isKilled = p.status === 'KILLED'
                       const hov = hoverId === p.slug
                       return (
                         <div
@@ -318,10 +333,19 @@ export function ProjectsPanel() {
                           onMouseEnter={() => setHoverId(p.slug)}
                           onMouseLeave={() => setHoverId(null)}
                           style={{
-                            border: `1px solid ${T.border}`,
+                            border: `1px solid ${
+                              isKilled ? 'rgba(180, 70, 70, 0.35)' : T.border
+                            }`,
                             padding: 16,
                             cursor: 'pointer',
-                            background: isWip ? T.paper : hov ? 'rgba(0,0,0,0.06)' : T.void,
+                            opacity: isKilled ? 0.82 : 1,
+                            background: isWip
+                              ? T.paper
+                              : isKilled
+                                ? 'rgba(90, 30, 30, 0.07)'
+                                : hov
+                                  ? 'rgba(0,0,0,0.06)'
+                                  : T.void,
                             color: isWip ? T.void : T.paper,
                           }}
                         >

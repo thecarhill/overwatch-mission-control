@@ -166,7 +166,7 @@ export function seedProjectsIfEmpty(db: Database.Database): void {
       slug: 'hevy-board',
       state: {
         projectName: 'hevy-board',
-        status: 'PARKED',
+        status: 'KILLED',
         priority: '04_BACKLOG',
         currentTask:
           'Dashboard Hevy (FastAPI + SQLite) — KILLED en inventario; lógica absorbida por ASCEND.',

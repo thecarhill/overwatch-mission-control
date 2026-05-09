@@ -1,6 +1,6 @@
 import type { ParsedState, Priority, ProjectStatus, SessionEntry } from '../types'
 
-const STATUSES: ProjectStatus[] = ['WIP', 'PARKED', 'BACKLOG']
+const STATUSES: ProjectStatus[] = ['WIP', 'PARKED', 'BACKLOG', 'KILLED']
 const PRIORITIES: Priority[] = [
   '01_CRITICAL',
   '02_HIGH',
