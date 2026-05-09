@@ -12,6 +12,14 @@ export async function fetchTasks(projectSlug: string): Promise<Task[]> {
   return j.tasks ?? []
 }
 
+/** All tasks across projects (`GET /api/tasks` without project_slug). */
+export async function fetchAllTasks(): Promise<Task[]> {
+  const r = await fetch(`${base}/api/tasks`)
+  if (!r.ok) throw new RepoApiError(await r.text(), r.status)
+  const j = (await r.json()) as { tasks: Task[] }
+  return j.tasks ?? []
+}
+
 export async function createTask(payload: {
   projectSlug: string
   title: string

@@ -12,6 +12,7 @@ export const STAGES: Stage[] = [
 export const TAB_ORDER: TabId[] = [
   'briefing',
   'projects',
+  'taskboard',
   'leads',
   'pipeline',
   'inbox',
@@ -21,6 +22,7 @@ export const TAB_ORDER: TabId[] = [
 export const PATH_MAP: Record<TabId, string> = {
   briefing: '/MNT/OPS/BRIEFING',
   projects: '/MNT/OPS/PROJECTS',
+  taskboard: '/MNT/OPS/TASKBOARD',
   leads: '/MNT/OPS/LEADS_CRM',
   pipeline: '/MNT/OPS/PIPELINE',
   inbox: '/MNT/OPS/INBOX',

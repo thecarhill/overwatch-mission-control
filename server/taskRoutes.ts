@@ -43,16 +43,22 @@ function mapRow(r: {
 export function registerTaskRoutes(app: Express, db: Database.Database): void {
   app.get('/api/tasks', (req: Request, res: Response) => {
     const slug = typeof req.query.project_slug === 'string' ? req.query.project_slug.trim() : ''
-    if (!slug) {
-      res.status(400).json({ error: 'project_slug query required' })
+    if (slug) {
+      const rows = db
+        .prepare(
+          `SELECT id, project_slug, title, description, status, priority, deadline, created_at, updated_at
+           FROM tasks WHERE project_slug = ? ORDER BY updated_at DESC`,
+        )
+        .all(slug) as Parameters<typeof mapRow>[0][]
+      res.json({ tasks: rows.map(mapRow) })
       return
     }
     const rows = db
       .prepare(
         `SELECT id, project_slug, title, description, status, priority, deadline, created_at, updated_at
-         FROM tasks WHERE project_slug = ? ORDER BY updated_at DESC`,
+         FROM tasks ORDER BY updated_at DESC`,
       )
-      .all(slug) as Parameters<typeof mapRow>[0][]
+      .all() as Parameters<typeof mapRow>[0][]
     res.json({ tasks: rows.map(mapRow) })
   })
 

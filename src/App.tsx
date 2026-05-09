@@ -7,6 +7,7 @@ import { LeadsPanel } from './components/leads/LeadsPanel'
 import { PipelinePanel } from './components/pipeline/PipelinePanel'
 import { InboxPanel } from './components/inbox/InboxPanel'
 import { ConfigPanel } from './components/config/ConfigPanel'
+import { AllTasksPanel } from './components/taskboard/AllTasksPanel'
 
 function Panels() {
   const { tab } = useApp()
@@ -14,6 +15,7 @@ function Panels() {
     <>
       {tab === 'briefing' && <BriefingPanel />}
       {tab === 'projects' && <ProjectsPanel />}
+      {tab === 'taskboard' && <AllTasksPanel />}
       {tab === 'leads' && <LeadsPanel />}
       {tab === 'pipeline' && <PipelinePanel />}
       {tab === 'inbox' && <InboxPanel />}

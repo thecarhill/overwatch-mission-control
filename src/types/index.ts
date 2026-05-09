@@ -77,6 +77,7 @@ export interface ProjectCard {
 export type TabId =
   | 'briefing'
   | 'projects'
+  | 'taskboard'
   | 'leads'
   | 'pipeline'
   | 'inbox'

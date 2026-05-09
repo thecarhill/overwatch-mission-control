@@ -10,7 +10,7 @@ export function usePanelShortcut(
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey
-      if (meta && e.key >= '1' && e.key <= '6') {
+      if (meta && e.key >= '1' && e.key <= '7') {
         const i = parseInt(e.key, 10) - 1
         if (TAB_ORDER[i]) {
           e.preventDefault()

@@ -35,10 +35,11 @@ export function Shell({ children }: { children: ReactNode }) {
   const tabs = [
     { id: 'briefing' as const, label: 'BRIEFING', num: '[00]' },
     { id: 'projects' as const, label: 'PROJECTS', num: '[01]' },
-    { id: 'leads' as const, label: 'LEADS_CRM', num: '[02]' },
-    { id: 'pipeline' as const, label: 'PIPELINE', num: '[03]' },
-    { id: 'inbox' as const, label: 'INBOX', num: '[04]', badge: String(inbox.length) },
-    { id: 'config' as const, label: 'CONFIG', num: '[05]' },
+    { id: 'taskboard' as const, label: 'TASKBOARD', num: '[02]' },
+    { id: 'leads' as const, label: 'LEADS_CRM', num: '[03]' },
+    { id: 'pipeline' as const, label: 'PIPELINE', num: '[04]' },
+    { id: 'inbox' as const, label: 'INBOX', num: '[05]', badge: String(inbox.length) },
+    { id: 'config' as const, label: 'CONFIG', num: '[06]' },
   ]
 
   return (
