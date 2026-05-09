@@ -1,0 +1,61 @@
+# Build + push imagen a GHCR en cada push a main (o manual).
+# En el repo: Settings → Secrets → Actions → añade VITE_GITHUB_PAT (fine-grained o classic con repo scope).
+
+name: Publish Docker image to GHCR
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: overwatch-mission-control
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Repo de datos (markdown/leads), no el nombre de este repo de código.
+      # Opción A: variable del repo Settings → Variables → VITE_GITHUB_REPO = OVERWATCH
+      # Opción B: si no existe la variable, por defecto OVERWATCH (spec)
+      - name: Resolve data repo name
+        id: data
+        run: |
+          R="${{ vars.VITE_GITHUB_REPO }}"
+          echo "repo=${R:-OVERWATCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata (tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_GITHUB_PAT=${{ secrets.VITE_GITHUB_PAT }}
+            VITE_GITHUB_OWNER=${{ github.repository_owner }}
+            VITE_GITHUB_REPO=${{ steps.data.outputs.repo }}
+            VITE_GITHUB_BRANCH=main

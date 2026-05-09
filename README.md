@@ -55,7 +55,26 @@ export $(grep -v '^#' .env | xargs)   # o usar docker-compose build con env_file
 docker build -t overwatch-mission-control:latest .
 ```
 
-El `Dockerfile` actual hace `COPY . .` y `npm run build`, así que **`.env` presente en el contexto de build** (sin subirlo a git) inyecta los `VITE_*` en `dist`.
+El `Dockerfile` acepta **`--build-arg`** `VITE_GITHUB_*` (ver cabecera del Dockerfile). Sin argumentos, `npm run build` puede fallar si no hay `.env`.
+
+### Subir imagen a GHCR desde GitHub (Actions)
+
+En el repo está [`.github/workflows/docker-ghcr.yml`](./.github/workflows/docker-ghcr.yml): en cada push a **`main`** (o manual *workflow_dispatch*) se construye la imagen y se publica en:
+
+`ghcr.io/<tu-usuario>/overwatch-mission-control:latest`  
+(y un tag adicional con el SHA del commit).
+
+**Qué configurar en GitHub (una vez):**
+
+1. **Settings → Secrets and variables → Actions → New repository secret**  
+   - **`VITE_GITHUB_PAT`**: token con scope **`repo`** sobre el repo de datos (el mismo que usarías en local).
+
+2. **Opcional — Settings → Secrets and variables → Actions → Variables**  
+   - **`VITE_GITHUB_REPO`**: nombre del repo de datos en GitHub (ej. `OVERWATCH`). Si no la creas, el workflow usa por defecto **`OVERWATCH`**.
+
+`VITE_GITHUB_OWNER` en CI sale de **`github.repository_owner`** (tu usuario u organización).
+
+Tras un push a `main`, en **Packages** del usuario/org aparecerá el contenedor. En Portainer: imagen `ghcr.io/thecarhill/overwatch-mission-control:latest`, con login a GHCR si el paquete es privado (`docker login ghcr.io` con PAT que tenga `read:packages`).
 
 ### Cloudflare Tunnel + Zero Trust
 
