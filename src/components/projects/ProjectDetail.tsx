@@ -5,6 +5,7 @@ import { CmdLink } from '../primitives/CmdLink'
 import { Rule } from '../primitives/Rule'
 import { SysLabel } from '../primitives/SysLabel'
 import { T } from '../../theme/tokens'
+import { ProjectTasksPanel } from './ProjectTasksPanel'
 
 const PRIORITIES: Priority[] = [
   '01_CRITICAL',
@@ -17,6 +18,7 @@ const STATUSES: ProjectStatus[] = ['WIP', 'PARKED', 'BACKLOG']
 
 export function ProjectDetail({
   displayId,
+  projectSlug,
   initial,
   syncing,
   onClose,
@@ -25,6 +27,8 @@ export function ProjectDetail({
   onSaveSession,
 }: {
   displayId: string
+  /** Path slug for tasks API */
+  projectSlug: string
   initial: ParsedState
   syncing: boolean
   onClose: () => void
@@ -34,6 +38,7 @@ export function ProjectDetail({
 }) {
   const [draft, setDraft] = useState<ParsedState>(initial)
   const [sessionNote, setSessionNote] = useState('')
+  const [detailTab, setDetailTab] = useState<'state' | 'tasks'>('state')
 
   const update = (patch: Partial<ParsedState>) =>
     setDraft((d) => ({ ...d, ...patch }))
@@ -54,22 +59,52 @@ export function ProjectDetail({
           zIndex: 10,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <CmdLink onClick={onClose}>&lt;- RETURN TO LIST</CmdLink>
           <span style={{ opacity: 0.2 }}>|</span>
           <SysLabel>TARGET: {displayId}</SysLabel>
+          <span style={{ opacity: 0.2 }}>|</span>
+          <CmdLink onClick={() => setDetailTab('state')}>
+            {detailTab === 'state' ? '[ STATE ]' : 'STATE'}
+          </CmdLink>
+          <CmdLink onClick={() => setDetailTab('tasks')}>
+            {detailTab === 'tasks' ? '[ TASKS ]' : 'TASKS'}
+          </CmdLink>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <SysLabel style={{ fontSize: 10, color: T.muted }}>
             {syncing ? 'SYNCING...' : ''}
           </SysLabel>
-          <CmdLink onClick={() => void onToggleWip(draft)}>TOGGLE WIP</CmdLink>
-          <Btn inverted onClick={() => void onSave(draft)}>
-            PUSH TO REPO
-          </Btn>
+          {detailTab === 'state' && (
+            <>
+              <CmdLink onClick={() => void onToggleWip(draft)}>TOGGLE WIP</CmdLink>
+              <Btn inverted onClick={() => void onSave(draft)}>
+                SAVE STATE
+              </Btn>
+            </>
+          )}
         </div>
       </div>
       <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+        {detailTab === 'tasks' ? (
+          <div style={{ maxWidth: 1100 }}>
+            <h2
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                margin: '0 0 20px',
+              }}
+            >
+              TASKS · {draft.projectName}
+            </h2>
+            <ProjectTasksPanel
+              key={projectSlug}
+              projectSlug={projectSlug}
+              syncing={syncing}
+            />
+          </div>
+        ) : (
         <div style={{ maxWidth: 800 }}>
           <h2
             style={{
@@ -300,6 +335,7 @@ export function ProjectDetail({
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   )

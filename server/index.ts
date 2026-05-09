@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import { openDb } from './db.js'
 import { upsertFile } from './fileStore.js'
 import { seedProjectsIfEmpty } from './seedProjects.js'
+import { registerTaskRoutes } from './taskRoutes.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -76,6 +77,8 @@ export function createApp(db: ReturnType<typeof openDb>) {
     }))
     res.json({ items })
   })
+
+  registerTaskRoutes(app, db)
 
   const dist = join(__dirname, '..', 'dist')
   if (existsSync(dist)) {

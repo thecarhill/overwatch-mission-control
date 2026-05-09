@@ -4,9 +4,21 @@ import { Rule } from '../primitives/Rule'
 import { SysLabel } from '../primitives/SysLabel'
 import { T } from '../../theme/tokens'
 import { useThemeConfig } from '../../context/ThemeContext'
+import { useAppSettings } from '../../context/AppSettingsContext'
 
 export function ConfigPanel() {
   const { mode, setMode, accent, setAccent, accentPresets } = useThemeConfig()
+  const {
+    projectsView,
+    setProjectsView,
+    tasksView,
+    setTasksView,
+    relativeDeadlines,
+    setRelativeDeadlines,
+    confirmTaskDelete,
+    setConfirmTaskDelete,
+    resetToDefaults,
+  } = useAppSettings()
   const [hexInput, setHexInput] = useState(accent)
 
   return (
@@ -30,7 +42,7 @@ export function ConfigPanel() {
           CONFIG
         </h1>
         <SysLabel style={{ color: T.muted, display: 'block', marginTop: 10 }}>
-          APPEARANCE // DATASTORE
+          APPEARANCE // DATASTORE // UI DEFAULTS
         </SysLabel>
       </div>
 
@@ -145,6 +157,75 @@ export function ConfigPanel() {
               color: T.paper,
             }}
           />
+        </div>
+
+        <SysLabel style={{ display: 'block', marginBottom: 12 }}>
+          PROJECTS & TASKS (DEFAULT VIEWS)
+        </SysLabel>
+        <div
+          style={{
+            border: `1px solid ${T.border}`,
+            padding: 20,
+            marginBottom: 28,
+          }}
+        >
+          <SysLabel
+            style={{ fontSize: 10, color: T.muted, display: 'block', marginBottom: 10 }}
+          >
+            OPEN PROJECTS TAB AS
+          </SysLabel>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+            <Btn inverted={projectsView === 'table'} onClick={() => setProjectsView('table')}>
+              TABLE
+            </Btn>
+            <Btn inverted={projectsView === 'kanban'} onClick={() => setProjectsView('kanban')}>
+              KANBAN
+            </Btn>
+          </div>
+
+          <SysLabel
+            style={{ fontSize: 10, color: T.muted, display: 'block', marginBottom: 10 }}
+          >
+            OPEN TASK PANEL AS (PER PROJECT)
+          </SysLabel>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+            <Btn inverted={tasksView === 'table'} onClick={() => setTasksView('table')}>
+              TABLE
+            </Btn>
+            <Btn inverted={tasksView === 'kanban'} onClick={() => setTasksView('kanban')}>
+              KANBAN
+            </Btn>
+          </div>
+
+          <SysLabel
+            style={{ fontSize: 10, color: T.muted, display: 'block', marginBottom: 10 }}
+          >
+            TASK DEADLINES
+          </SysLabel>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+            <Btn inverted={relativeDeadlines} onClick={() => setRelativeDeadlines(true)}>
+              RELATIVE (today / in 3d)
+            </Btn>
+            <Btn inverted={!relativeDeadlines} onClick={() => setRelativeDeadlines(false)}>
+              DATE ONLY (YYYY-MM-DD)
+            </Btn>
+          </div>
+
+          <SysLabel
+            style={{ fontSize: 10, color: T.muted, display: 'block', marginBottom: 10 }}
+          >
+            SAFETY
+          </SysLabel>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+            <Btn inverted={confirmTaskDelete} onClick={() => setConfirmTaskDelete(true)}>
+              CONFIRM TASK DELETE
+            </Btn>
+            <Btn inverted={!confirmTaskDelete} onClick={() => setConfirmTaskDelete(false)}>
+              DELETE WITHOUT CONFIRM
+            </Btn>
+          </div>
+
+          <Btn onClick={() => resetToDefaults()}>RESET UI SETTINGS TO DEFAULTS</Btn>
         </div>
       </div>
     </div>

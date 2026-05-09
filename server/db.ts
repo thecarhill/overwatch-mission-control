@@ -17,7 +17,25 @@ export function openDb(): Database.Database {
   `)
 
   migrateLegacySchema(db)
+  ensureTasksTable(db)
   return db
+}
+
+function ensureTasksTable(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      project_slug TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'todo',
+      priority TEXT NOT NULL DEFAULT '03_STANDARD',
+      deadline TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_slug);
+  `)
 }
 
 /** Older installs had github_sha / dirty — collapse to path + content + updated_at */

@@ -87,3 +87,21 @@ export interface ProjectRegistryRow {
   slug: string
   nameHint?: string
 }
+
+/** Task workflow columns (Kanban). */
+export type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done'
+
+export interface Task {
+  id: string
+  projectSlug: string
+  title: string
+  description: string
+  status: TaskStatus
+  priority: Priority
+  deadline: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ProjectsListViewMode = 'table' | 'kanban'
+export type TasksListViewMode = 'table' | 'kanban'
