@@ -74,17 +74,36 @@ function headers(): HeadersInit {
   }
 }
 
+/**
+ * Builds `https://api.github.com/repos/{owner}/{repo}{path}`.
+ * Pass repo-relative paths only, e.g. `/contents/leads.json?ref=main` — do not include `/repos/...`
+ * twice (that was a bug: double `/repos/owner/repo` broke every contents call).
+ */
 async function ghFetch(path: string, init?: RequestInit): Promise<Response> {
   const { owner, repo } = env()
-  const url =
-    path.startsWith('http')
-      ? path
-      : `${API}/repos/${owner}/${repo}${path.startsWith('/') ? path : '/' + path}`
-  const res = await fetch(url, {
-    ...init,
-    headers: { ...headers(), ...init?.headers },
-  })
-  return res
+  let url: string
+  if (path.startsWith('http')) {
+    url = path
+  } else if (path.startsWith('/repos/')) {
+    url = `${API}${path}`
+  } else {
+    const p = path.startsWith('/') ? path : `/${path}`
+    url = `${API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}${p}`
+  }
+  try {
+    const res = await fetch(url, {
+      ...init,
+      headers: { ...headers(), ...init?.headers },
+    })
+    return res
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    throw new GitHubApiError(
+      `Network error talking to GitHub API (${msg}). Check connectivity; repo slug must not be a full URL.`,
+      0,
+      msg,
+    )
+  }
 }
 
 export interface ContentFile {
@@ -108,7 +127,7 @@ export async function getContentsJson(path: string): Promise<ContentDirItem[] | 
   const { branch } = env()
   const q = `?ref=${encodeURIComponent(branch)}`
   const res = await ghFetch(
-    `/repos/${env().owner}/${env().repo}/contents/${encodeURIComponent(path)}${q}`,
+    `/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}${q}`,
   )
   if (res.status === 404) throw new GitHubApiError('Not found', 404)
   if (!res.ok) {
@@ -158,7 +177,7 @@ export async function putTextFile(
   }
   if (sha) body.sha = sha
 
-  const res = await ghFetch(`/repos/${env().owner}/${env().repo}/contents/${encodeURIComponent(path)}`, {
+  const res = await ghFetch(`/contents/${encodeURIComponent(path).replace(/%2F/g, '/')}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
