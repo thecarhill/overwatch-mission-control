@@ -82,7 +82,7 @@ Tienes **dos modos**:
 
 #### A) Imagen desde GHCR (`docker-compose.yml`)
 
-Usa **`docker-compose.yml`** (pull de **`ghcr.io/thecarhill/overwatch-mission-control:latest`**).
+Usa **`docker-compose.yml`** (pull de **`ghcr.io/thecarhill/overwatch-mission-control:latest`**). Ese fichero **ya incluye** la red Docker **`traefik`**, los **labels de Traefik** (Cloudflare, `web` / `websecure`, middlewares) y el mapeo de puerto. En el host, crea la red una vez si no existe: `docker network create traefik`. Variable opcional **`OVERWATCH_IMAGE`** si publicas bajo otro owner en GHCR.
 
 Si ves **`unauthorized`** al hacer pull, Portainer a menudo **no reutiliza** el login de *Registries* para `docker compose`. Prueba en el **host del NUC** (SSH):
 
@@ -96,7 +96,7 @@ docker pull ghcr.io/thecarhill/overwatch-mission-control:latest
 
 #### B) Build en el servidor — sin GHCR (`docker-compose.build.yml`) — recomendado si GHCR da guerra
 
-1. En Portainer, **Compose path:** **`docker-compose.build.yml`** (no `docker-compose.yml`).
+1. En Portainer, **Compose path:** **`docker-compose.build.yml`** (no `docker-compose.yml`). Misma red Traefik y mismos labels que en A; también necesitas la red externa **`traefik`** en el host.
 2. **Environment variables** del stack:
    - **`VITE_GITHUB_PAT`** — PAT con acceso al repo de datos  
    - **`VITE_GITHUB_OWNER`** — ej. `thecarhill`  
@@ -120,9 +120,9 @@ Portainer clona el repo y ejecuta **`docker compose build`**: no hay pull de GHC
 
 2. Con **`docker-compose.yml`** (pull GHCR), las variables **`VITE_*` en Portainer no cambian el bundle** (ya está compilado en la imagen). Con **`docker-compose.build.yml`**, sí debes rellenar **`VITE_GITHUB_*`** para el build en el servidor.
 
-3. Si antes fallaba el deploy: el compose antiguo tenía **`networks.web.external: true`** sin crear la red `web` en el host → error típico. El `docker-compose.yml` actual ya no lo exige.
+3. Si falla el deploy con error de red: el compose declara **`networks.traefik.external: true`** → en el host debe existir **`docker network create traefik`** (igual que tu stack n8n).
 
-Para Traefik (misma red que n8n), usa **`docker-compose.traefik.yml`**: red Docker **`traefik`** externa (`docker network create traefik` si no existe), labels alineados con **certresolver `cloudflare`** y middlewares `secure-headers@file` / `redirect-to-https@file`. Opcional en Portainer: variable **`OVERWATCH_IMAGE`** si tu imagen GHCR es otro owner (por defecto `ghcr.io/themarbit/overwatch-mission-control:latest`).
+**Traefik:** Va integrado en **`docker-compose.yml`** y **`docker-compose.build.yml`**. **`docker-compose.traefik.yml`** solo hace `include` del principal por compatibilidad con stacks antiguos; no hace falta cambiar el path en Portainer si ya usas `docker-compose.yml`.
 
 ### Cloudflare Tunnel + Zero Trust
 

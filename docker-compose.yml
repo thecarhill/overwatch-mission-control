@@ -1,10 +1,32 @@
-# Portainer / despliegue genérico: imagen desde GHCR + puerto publicado.
-# (La versión con Traefik + red externa `traefik` está en docker-compose.traefik.yml)
+# Portainer / CLI: GHCR + puerto opcional + Traefik (misma convención que n8n).
+# Antes del primer deploy: docker network create traefik   (si no existe)
+# Opcional: OVERWATCH_IMAGE, OVERWATCH_PORT (default 8080)
+
+version: "3.8"
 
 services:
   overwatch:
-    image: ghcr.io/thecarhill/overwatch-mission-control:latest
+    image: ${OVERWATCH_IMAGE:-ghcr.io/thecarhill/overwatch-mission-control:latest}
+    container_name: overwatch
     pull_policy: always
     restart: unless-stopped
     ports:
       - "${OVERWATCH_PORT:-8080}:80"
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.services.overwatch.loadbalancer.server.port=80"
+      - "traefik.http.routers.overwatch.rule=Host(`overwatch.carceller.cc`)"
+      - "traefik.http.routers.overwatch.entrypoints=websecure"
+      - "traefik.http.routers.overwatch.tls=true"
+      - "traefik.http.routers.overwatch.tls.certresolver=cloudflare"
+      - "traefik.http.routers.overwatch.middlewares=secure-headers@file"
+      - "traefik.http.routers.overwatch-http.rule=Host(`overwatch.carceller.cc`)"
+      - "traefik.http.routers.overwatch-http.entrypoints=web"
+      - "traefik.http.routers.overwatch-http.middlewares=redirect-to-https@file"
+
+networks:
+  traefik:
+    external: true

@@ -1,37 +1,5 @@
-# Traefik + TLS (misma convención que el stack n8n).
-# Red externa: docker network create traefik   (si no existe)
-# Imagen: debe coincidir con tu paquete GHCR (owner/repo del workflow).
-# Deploy: docker compose -f docker-compose.traefik.yml up -d
+# Alias: mismo stack que docker-compose.yml (Traefik ya va en el compose principal).
+# Compose 2.20+ — si Portainer falla, usa como path docker-compose.yml
 
-version: "3.8"
-
-services:
-  overwatch:
-    image: ${OVERWATCH_IMAGE:-ghcr.io/themarbit/overwatch-mission-control:latest}
-    container_name: overwatch
-    pull_policy: always
-    restart: unless-stopped
-    networks:
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
-
-      # Puerto interno del contenedor (nginx)
-      - "traefik.http.services.overwatch.loadbalancer.server.port=80"
-
-      # HTTPS
-      - "traefik.http.routers.overwatch.rule=Host(`overwatch.carceller.cc`)"
-      - "traefik.http.routers.overwatch.entrypoints=websecure"
-      - "traefik.http.routers.overwatch.tls=true"
-      - "traefik.http.routers.overwatch.tls.certresolver=cloudflare"
-      - "traefik.http.routers.overwatch.middlewares=secure-headers@file"
-
-      # HTTP → HTTPS (misma idea que n8n-http)
-      - "traefik.http.routers.overwatch-http.rule=Host(`overwatch.carceller.cc`)"
-      - "traefik.http.routers.overwatch-http.entrypoints=web"
-      - "traefik.http.routers.overwatch-http.middlewares=redirect-to-https@file"
-
-networks:
-  traefik:
-    external: true
+include:
+  - docker-compose.yml
