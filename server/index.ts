@@ -92,7 +92,13 @@ export function createApp(db: ReturnType<typeof openDb>) {
 }
 
 const port = parseInt(process.env.PORT || '8080', 10)
-const db = openDb()
+let db: ReturnType<typeof openDb>
+try {
+  db = openDb()
+} catch (err) {
+  console.error('[overwatch] Failed to open SQLite:', err)
+  process.exit(1)
+}
 const app = createApp(db)
 app.listen(port, '0.0.0.0', () => {
   console.log(`Overwatch server listening on :${port} (SQLite only)`)

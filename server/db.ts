@@ -28,6 +28,10 @@ function migrateLegacySchema(db: Database.Database) {
   const names = new Set(cols.map((c) => c.name))
   if (!names.has('github_sha') && !names.has('dirty')) return
 
+  const tsSelect = names.has('updated_at')
+    ? `COALESCE(updated_at, datetime('now'))`
+    : `datetime('now')`
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS files_migrated (
       path TEXT PRIMARY KEY,
@@ -35,7 +39,7 @@ function migrateLegacySchema(db: Database.Database) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     INSERT OR REPLACE INTO files_migrated (path, content, updated_at)
-    SELECT path, content, COALESCE(updated_at, datetime('now')) FROM files;
+    SELECT path, content, ${tsSelect} FROM files;
     DROP TABLE files;
     ALTER TABLE files_migrated RENAME TO files;
   `)
