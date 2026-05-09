@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --ow-void: #ffffff;
+  --ow-paper: #000000;
+  --ow-muted: rgba(0, 0, 0, 0.55);
+  --ow-border: #000000;
+  --ow-border-dim: rgba(0, 0, 0, 0.12);
+  --ow-hover: rgba(0, 0, 0, 0.06);
+  --ow-accent: #000000;
+  --ow-on-accent: #ffffff;
+  --ow-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --ow-sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+[data-theme='dark'] {
+  --ow-void: #0c0c0c;
+  --ow-paper: #ececec;
+  --ow-muted: rgba(255, 255, 255, 0.55);
+  --ow-border: rgba(255, 255, 255, 0.9);
+  --ow-border-dim: rgba(255, 255, 255, 0.14);
+  --ow-hover: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--ow-void);
+  font-family: var(--ow-sans);
+  color: var(--ow-paper);
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+}
+
+::selection {
+  background: var(--ow-accent);
+  color: var(--ow-on-accent);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ow {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-cursor-blink {
+  animation: pulse 1s infinite;
+}

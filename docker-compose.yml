@@ -1,0 +1,15 @@
+services:
+  overwatch:
+    build: .
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.overwatch.rule=Host(`overwatch.carceller.cc`)'
+      - 'traefik.http.routers.overwatch.entrypoints=websecure'
+      - 'traefik.http.routers.overwatch.tls.certresolver=letsencrypt'
+
+networks:
+  web:
+    external: true
