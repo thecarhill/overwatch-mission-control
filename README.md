@@ -80,8 +80,17 @@ Tras un push a `main`, en **Packages** del usuario/org aparecerá el contenedor.
 
 Usa **`docker-compose.yml`** en la raíz (imagen **GHCR**, puerto **8080→80**).
 
-1. **Registry GHCR** (si el paquete es privado): en Portainer → **Registries** → añade `ghcr.io`, usuario GitHub y PAT con `read:packages`.
+1. **Registry GHCR (obligatorio si el error es `unauthorized`)**  
+   Las imágenes en `ghcr.io` suelen ser **privadas** por defecto. En Portainer:
+   - **Registries → Add registry**
+   - **Registry URL:** `ghcr.io` (a veces basta `ghcr.io` sin `https://`)
+   - **Username:** tu usuario de GitHub (ej. `thecarhill`)
+   - **Password:** un **PAT** con scope **`read:packages`** (y acceso a `read:org` si la org lo exige)  
+   Luego, al crear el stack, asocia esa registry al despliegue o usa un entorno donde `docker pull ghcr.io/...` ya funcione.  
+   **Alternativa:** en GitHub → **Packages** → el paquete `overwatch-mission-control` → **Package settings** → **Change package visibility** → **Public** (cualquiera puede hacer `pull` sin login).
+
 2. La variable **`VITE_GITHUB_PAT` en el formulario del stack no cambia el bundle** si usas la imagen precompilada: el token ya va dentro del JS construido en Actions. Solo sirve si montas un compose que haga **`build`** con `args` (no es el caso del compose por defecto).
+
 3. Si antes fallaba el deploy: el compose antiguo tenía **`networks.web.external: true`** sin crear la red `web` en el host → error típico. El `docker-compose.yml` actual ya no lo exige.
 
 Para Traefik + red `web`, usa **`docker-compose.traefik.yml`** como *Compose path* (y crea antes `docker network create web`).
