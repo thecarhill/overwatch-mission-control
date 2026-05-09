@@ -31,7 +31,8 @@ import type {
   TabId,
 } from '../types'
 
-const LEADS_DEBOUNCE_MS = 2000
+/** Typing / drag: debounced. Create/delete/pagehide: immediate flush so refresh never loses data. */
+const LEADS_DEBOUNCE_MS = 600
 const SYNC_ERROR_MS = 8000
 
 function nowIso(): string {
@@ -180,38 +181,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clearSyncError = useCallback(() => setSyncError(null), [])
 
-  const persistLeadsNow = useCallback(async () => {
-    const body: LeadsFile = { leads: leadsRef.current }
-    const json = JSON.stringify(body, null, 2)
-    const msg = `overwatch: update leads.json`
-    try {
-      setSyncing(true)
-      await putTextFile(REPO_PATHS.leadsJson, json, msg, leadsShaRef.current)
-      const fresh = await getTextFile(REPO_PATHS.leadsJson)
-      if (fresh) setLeadsSha(fresh.sha)
-      pushActivity({ category: 'SYNC', message: 'leads.json saved' })
-    } catch (err) {
-      const m =
-        err instanceof GitHubApiError ? err.message : String(err)
-      showError(m)
-    } finally {
-      setSyncing(false)
-    }
-  }, [pushActivity, showError])
+  /** Optional snapshot: use when React state is newer than leadsRef (e.g. right after setState). */
+  const persistLeadsToGithub = useCallback(
+    async (snapshot?: Lead[]) => {
+      const data = snapshot ?? leadsRef.current
+      leadsRef.current = data
+      const body: LeadsFile = { leads: data }
+      const json = JSON.stringify(body, null, 2)
+      const msg = `overwatch: update leads.json`
+      try {
+        setSyncing(true)
+        await putTextFile(REPO_PATHS.leadsJson, json, msg, leadsShaRef.current)
+        const fresh = await getTextFile(REPO_PATHS.leadsJson)
+        if (fresh) {
+          setLeadsSha(fresh.sha)
+          leadsShaRef.current = fresh.sha
+        }
+        pushActivity({ category: 'SYNC', message: 'leads.json saved' })
+      } catch (err) {
+        const m =
+          err instanceof GitHubApiError ? err.message : String(err)
+        showError(m)
+      } finally {
+        setSyncing(false)
+      }
+    },
+    [pushActivity, showError],
+  )
 
   const schedulePersistLeads = useCallback(() => {
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
     persistTimerRef.current = setTimeout(() => {
       persistTimerRef.current = null
-      void persistLeadsNow()
+      void persistLeadsToGithub()
     }, LEADS_DEBOUNCE_MS)
-  }, [persistLeadsNow])
+  }, [persistLeadsToGithub])
 
+  /** Before refresh/close: cancel debounce timer and PUT latest leads.json (avoids losing edits). */
   useEffect(() => {
-    return () => {
-      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+    const flushOnLeave = () => {
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current)
+        persistTimerRef.current = null
+      }
+      void persistLeadsToGithub()
     }
-  }, [])
+    window.addEventListener('pagehide', flushOnLeave)
+    return () => window.removeEventListener('pagehide', flushOnLeave)
+  }, [persistLeadsToGithub])
 
   const loadLeads = useCallback(async () => {
     const f = await getTextFile(REPO_PATHS.leadsJson)
@@ -387,11 +404,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteLead = useCallback(
     (id: string) => {
-      setLeads((prev) => prev.filter((l) => l.id !== id))
       setLeadDetailId((cur) => (cur === id ? null : cur))
-      schedulePersistLeads()
+      setLeads((prev) => {
+        const next = prev.filter((l) => l.id !== id)
+        queueMicrotask(() => void persistLeadsToGithub(next))
+        return next
+      })
     },
-    [schedulePersistLeads],
+    [persistLeadsToGithub],
   )
 
   const createLead = useCallback(
@@ -401,33 +421,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
       url?: string
       notes?: string
     }) => {
-      const id = nextLeadId(leadsRef.current)
-      const d = todayIso()
-      const lead: Lead = {
-        id,
-        name: payload.name.trim(),
-        city: payload.city.trim(),
-        url: (payload.url ?? '').trim(),
-        sent: d,
-        stage: 'SENT',
-        lastContact: d,
-        notes: (payload.notes ?? '').trim(),
-        activity: [
-          {
-            ts: nowIso(),
-            type: 'created',
-            detail: 'Lead created, demo sent',
-          },
-        ],
-      }
-      setLeads((prev) => [...prev, lead])
-      pushActivity({
-        category: 'LEAD',
-        message: `Lead created: ${lead.name}`,
+      setLeads((prev) => {
+        const id = nextLeadId(prev)
+        const d = todayIso()
+        const lead: Lead = {
+          id,
+          name: payload.name.trim(),
+          city: payload.city.trim(),
+          url: (payload.url ?? '').trim(),
+          sent: d,
+          stage: 'SENT',
+          lastContact: d,
+          notes: (payload.notes ?? '').trim(),
+          activity: [
+            {
+              ts: nowIso(),
+              type: 'created',
+              detail: 'Lead created, demo sent',
+            },
+          ],
+        }
+        const next = [...prev, lead]
+        queueMicrotask(() => void persistLeadsToGithub(next))
+        queueMicrotask(() =>
+          pushActivity({
+            category: 'LEAD',
+            message: `Lead created: ${lead.name}`,
+          }),
+        )
+        return next
       })
-      schedulePersistLeads()
     },
-    [pushActivity, schedulePersistLeads],
+    [persistLeadsToGithub, pushActivity],
   )
 
   const getProjectState = useCallback(
