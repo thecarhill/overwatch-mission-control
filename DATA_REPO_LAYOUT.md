@@ -1,11 +1,11 @@
-# Repo de datos GitHub — Checklist frente a la app
+# Layout de datos en SQLite — Checklist frente a la app
 
-La app lee/escribe estos paths en **`VITE_GITHUB_REPO`** (el nombre del repo puede variar; importa la **estructura**).
+La app lee/escribe estos paths lógicos en la tabla `files` del servidor (**no** hay repo Git detrás; importa solo la **estructura**).
 
 ## Árbol
 
 ```
-(repositorio raíz)/
+(raíz virtual del almacén)/
 ├── projects.md              # Opcional: registro maestro
 ├── inbox.md                 # Opcional al inicio
 ├── leads.json               # Opcional; el primer lead puede crearlo la app
@@ -25,10 +25,9 @@ La app lee/escribe estos paths en **`VITE_GITHUB_REPO`** (el nombre del repo pue
 
 ## Validación rápida
 
-1. Nombre del repo en GitHub = `VITE_GITHUB_REPO`.
-2. Rama por defecto = `VITE_GITHUB_BRANCH` o **`main`**.
-3. Al menos un **`projects/<slug>/state.md`** con las secciones del spec (`## Status`, `## Priority`, etc.).
-4. PAT de la build con scope **`repo`** sobre ese repo.
+1. El servidor tiene **`DATA_DIR`** (o `SQLITE_PATH`) accesible y crea **`overwatch.db`**.
+2. Al menos un **`projects/<slug>/state.md`** con las secciones del spec (`## Status`, `## Priority`, etc.).
+3. Opcional: semilla inicial importando contenido vía **`PUT /api/file`** o copiando una DB ya poblada al volumen.
 
 ## Plantillas mínimas (seed)
 
@@ -84,4 +83,4 @@ None
 
 ```
 
-Si tu repo coincide con esto (incluso solo `projects/*/state.md` sin `projects.md`), **la app es compatible**.
+Si tu almacén coincide con esto (incluso solo `projects/*/state.md` sin `projects.md`), **la app es compatible**.

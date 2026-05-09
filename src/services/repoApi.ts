@@ -1,5 +1,5 @@
 /**
- * Local SQLite API (Docker server). GitHub push/pull is explicit via postPush/postPull.
+ * Local SQLite API — same origin as the Node server (Docker).
  */
 
 const base = import.meta.env.VITE_API_BASE ?? ''
@@ -32,12 +32,12 @@ export async function putTextFile(
 ): Promise<void> {
   void _message
   void _sha
-  const r = await fetch(`${base}/api/file?path=${encodeURIComponent(path)}`, {
+  const res = await fetch(`${base}/api/file?path=${encodeURIComponent(path)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content }),
   })
-  if (!r.ok) throw new RepoApiError(await r.text(), r.status)
+  if (!res.ok) throw new RepoApiError(await res.text(), res.status)
 }
 
 export interface ContentDirItem {
@@ -52,30 +52,4 @@ export async function listDirectory(path: string): Promise<ContentDirItem[]> {
   if (!r.ok) throw new RepoApiError(await r.text(), r.status)
   const j = (await r.json()) as { items: ContentDirItem[] }
   return j.items ?? []
-}
-
-export async function postPush(): Promise<{ pushed: string[] }> {
-  const r = await fetch(`${base}/api/sync/push`, { method: 'POST' })
-  const j = (await r.json()) as { pushed?: string[]; error?: string }
-  if (!r.ok) throw new RepoApiError(j.error ?? 'push failed', r.status)
-  return { pushed: j.pushed ?? [] }
-}
-
-export async function postPull(): Promise<{ pulled: string[] }> {
-  const r = await fetch(`${base}/api/sync/pull`, { method: 'POST' })
-  const j = (await r.json()) as { pulled?: string[]; error?: string }
-  if (!r.ok) throw new RepoApiError(j.error ?? 'pull failed', r.status)
-  return { pulled: j.pulled ?? [] }
-}
-
-export async function getSyncStatus(): Promise<{
-  configured: boolean
-  dirtyCount: number
-  owner: string | null
-  repo: string | null
-  branch: string | null
-}> {
-  const r = await fetch(`${base}/api/sync/status`)
-  if (!r.ok) throw new RepoApiError(await r.text(), r.status)
-  return r.json()
 }

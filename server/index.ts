@@ -4,13 +4,7 @@ import { existsSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { openDb } from './db.js'
-import { readGithubEnv } from './githubRemote.js'
-import {
-  countDirty,
-  pullFromGithub,
-  pushDirtyToGithub,
-  upsertLocalWrite,
-} from './syncLogic.js'
+import { upsertFile } from './fileStore.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -23,74 +17,7 @@ export function createApp(db: ReturnType<typeof openDb>) {
     res.json({ ok: true })
   })
 
-  app.get('/api/github/verify', async (_req, res) => {
-    const env = readGithubEnv()
-    if (!env) {
-      res.json({
-        ok: false,
-        error:
-          'Server env: set GITHUB_TOKEN (or GITHUB_PAT), GITHUB_OWNER, GITHUB_REPO',
-      })
-      return
-    }
-    try {
-      const r = await fetch('https://api.github.com/user', {
-        headers: {
-          Authorization: `Bearer ${env.token}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-      })
-      if (!r.ok) {
-        const t = await r.text()
-        res.json({
-          ok: false,
-          error: `HTTP ${r.status}: ${t.slice(0, 240)}`,
-        })
-        return
-      }
-      const j = (await r.json()) as { login?: string }
-      res.json({ ok: true, login: j.login })
-    } catch (e) {
-      res.json({
-        ok: false,
-        error: e instanceof Error ? e.message : String(e),
-      })
-    }
-  })
-
-  app.get('/api/sync/status', (_req, res) => {
-    const env = readGithubEnv()
-    res.json({
-      configured: Boolean(env),
-      dirtyCount: countDirty(db),
-      owner: env?.owner ?? null,
-      repo: env?.repo ?? null,
-      branch: env?.branch ?? null,
-    })
-  })
-
-  app.post('/api/sync/push', async (_req, res) => {
-    try {
-      const { pushed } = await pushDirtyToGithub(db)
-      res.json({ ok: true, pushed })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      res.status(400).json({ ok: false, error: msg })
-    }
-  })
-
-  app.post('/api/sync/pull', async (_req, res) => {
-    try {
-      const { pulled } = await pullFromGithub(db)
-      res.json({ ok: true, pulled })
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      res.status(400).json({ ok: false, error: msg })
-    }
-  })
-
-  /** GET file — 404 if missing (same contract as old GitHub client). */
+  /** GET file — 404 if missing */
   app.get('/api/file', (req, res) => {
     const path = req.query.path
     if (typeof path !== 'string' || !path.trim()) {
@@ -98,18 +25,15 @@ export function createApp(db: ReturnType<typeof openDb>) {
       return
     }
     const row = db
-      .prepare(
-        `SELECT content, github_sha AS sha, dirty FROM files WHERE path = ?`,
-      )
-      .get(path) as { content: string; sha: string | null; dirty: number } | undefined
+      .prepare(`SELECT content, updated_at FROM files WHERE path = ?`)
+      .get(path) as { content: string; updated_at: string } | undefined
     if (!row) {
       res.status(404).end()
       return
     }
     res.json({
       content: row.content,
-      sha: row.sha ?? undefined,
-      dirty: Boolean(row.dirty),
+      sha: row.updated_at,
     })
   })
 
@@ -124,14 +48,11 @@ export function createApp(db: ReturnType<typeof openDb>) {
       res.status(400).json({ error: 'JSON body { content: string } required' })
       return
     }
-    upsertLocalWrite(db, path, body.content)
-    const row = db
-      .prepare(`SELECT github_sha AS sha, dirty FROM files WHERE path = ?`)
-      .get(path) as { sha: string | null; dirty: number }
-    res.json({ ok: true, sha: row.sha ?? undefined, dirty: Boolean(row.dirty) })
+    upsertFile(db, path, body.content)
+    res.json({ ok: true })
   })
 
-  /** List immediate names under path (e.g. projects → slug dirs from projects/foo/... keys). */
+  /** List immediate names under path (e.g. projects → slugs from projects/foo/...) */
   app.get('/api/browse', (req, res) => {
     const prefix = typeof req.query.path === 'string' ? req.query.path : ''
     if (!prefix.trim()) {
@@ -174,5 +95,5 @@ const port = parseInt(process.env.PORT || '8080', 10)
 const db = openDb()
 const app = createApp(db)
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Overwatch server listening on :${port} (SQLite + /api)`)
+  console.log(`Overwatch server listening on :${port} (SQLite only)`)
 })

@@ -1,5 +1,5 @@
 # Build + push imagen a GHCR en cada push a main (o manual).
-# Imagen: Node + SQLite + estático. Secretos de GitHub **en runtime** (Portainer: GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO).
+# Imagen: Node + SQLite + estático. Persistencia: volumen /data (sin GitHub en runtime).
 
 name: Publish Docker image to GHCR
 

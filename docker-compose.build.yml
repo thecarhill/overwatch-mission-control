@@ -19,10 +19,6 @@ services:
     environment:
       DATA_DIR: /data
       PORT: "8080"
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      GITHUB_OWNER: ${GITHUB_OWNER:-}
-      GITHUB_REPO: ${GITHUB_REPO:-}
-      GITHUB_BRANCH: ${GITHUB_BRANCH:-main}
     networks:
       - traefik
     labels:

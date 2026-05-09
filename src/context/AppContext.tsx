@@ -12,10 +12,7 @@ import {
   getTextFile,
   putTextFile,
   listDirectory,
-  postPull,
-  postPush,
   RepoApiError,
-  getSyncStatus,
 } from '../services/repoApi'
 import { parseStateMd, serializeStateMd, appendSessionNote } from '../utils/parseState'
 import { appendInboxLine, parseInboxMd } from '../utils/parseInbox'
@@ -108,12 +105,6 @@ interface AppContextValue {
   >
   executeWipSwap: (parkSlug: string, activateSlug: string) => Promise<void>
   refreshAll: () => Promise<void>
-  /** SQLite dirty rows / GitHub env configured (Docker server). */
-  dirtyCount: number
-  githubRemoteConfigured: boolean
-  refreshSyncStatus: () => Promise<void>
-  pushToGithub: () => Promise<void>
-  pullFromGithub: () => Promise<void>
   activityLog: ActivityLogEntry[]
   pushActivity: (e: Omit<ActivityLogEntry, 'ts'> & { ts?: string }) => void
   wipName: string | null
@@ -136,8 +127,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [syncError, setSyncError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [dirtyCount, setDirtyCount] = useState(0)
-  const [githubRemoteConfigured, setGithubRemoteConfigured] = useState(false)
 
   const [leads, setLeads] = useState<Lead[]>([])
   const [leadsSha, setLeadsSha] = useState<string | undefined>()
@@ -191,19 +180,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clearSyncError = useCallback(() => setSyncError(null), [])
 
-  const refreshSyncStatus = useCallback(async () => {
-    try {
-      const s = await getSyncStatus()
-      setDirtyCount(s.dirtyCount)
-      setGithubRemoteConfigured(s.configured)
-    } catch {
-      setDirtyCount(0)
-      setGithubRemoteConfigured(false)
-    }
-  }, [])
-
   /** Optional snapshot: use when React state is newer than leadsRef (e.g. right after setState). */
-  const persistLeadsToGithub = useCallback(
+  const persistLeadsLocal = useCallback(
     async (snapshot?: Lead[]) => {
       const data = snapshot ?? leadsRef.current
       leadsRef.current = data
@@ -219,7 +197,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           leadsShaRef.current = fresh.sha
         }
         pushActivity({ category: 'SYNC', message: 'leads.json saved (local DB)' })
-        void refreshSyncStatus()
       } catch (err) {
         const m =
           err instanceof RepoApiError ? err.message : String(err)
@@ -228,16 +205,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSyncing(false)
       }
     },
-    [pushActivity, showError, refreshSyncStatus],
+    [pushActivity, showError],
   )
 
   const schedulePersistLeads = useCallback(() => {
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
     persistTimerRef.current = setTimeout(() => {
       persistTimerRef.current = null
-      void persistLeadsToGithub()
+      void persistLeadsLocal()
     }, LEADS_DEBOUNCE_MS)
-  }, [persistLeadsToGithub])
+  }, [persistLeadsLocal])
 
   /** Before refresh/close: cancel debounce timer and PUT latest leads.json (avoids losing edits). */
   useEffect(() => {
@@ -246,11 +223,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         clearTimeout(persistTimerRef.current)
         persistTimerRef.current = null
       }
-      void persistLeadsToGithub()
+      void persistLeadsLocal()
     }
     window.addEventListener('pagehide', flushOnLeave)
     return () => window.removeEventListener('pagehide', flushOnLeave)
-  }, [persistLeadsToGithub])
+  }, [persistLeadsLocal])
 
   const loadLeads = useCallback(async () => {
     const f = await getTextFile(REPO_PATHS.leadsJson)
@@ -357,59 +334,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [loadLeads, loadInbox, loadProjects, pushActivity, showError])
 
-  /* eslint-disable react-hooks/set-state-in-effect -- one-shot GitHub bootstrap */
+  /* eslint-disable react-hooks/set-state-in-effect -- one-shot load from API */
   useEffect(() => {
     void refreshAll()
   }, [refreshAll])
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  useEffect(() => {
-    queueMicrotask(() => void refreshSyncStatus())
-  }, [refreshSyncStatus])
-
-  const pushToGithub = useCallback(async () => {
-    try {
-      setSyncing(true)
-      const { pushed } = await postPush()
-      pushActivity({
-        category: 'SYNC',
-        message:
-          pushed.length > 0
-            ? `GitHub push OK (${pushed.length} path(s))`
-            : 'GitHub push — nothing dirty',
-      })
-      await refreshSyncStatus()
-      await refreshAll()
-    } catch (err) {
-      const m =
-        err instanceof RepoApiError ? err.message : String(err)
-      showError(m)
-    } finally {
-      setSyncing(false)
-    }
-  }, [pushActivity, refreshAll, refreshSyncStatus, showError])
-
-  const pullFromGithub = useCallback(async () => {
-    try {
-      setSyncing(true)
-      const { pulled } = await postPull()
-      pushActivity({
-        category: 'SYNC',
-        message:
-          pulled.length > 0
-            ? `GitHub pull OK (${pulled.length} path(s))`
-            : 'GitHub pull — no files found',
-      })
-      await refreshSyncStatus()
-      await refreshAll()
-    } catch (err) {
-      const m =
-        err instanceof RepoApiError ? err.message : String(err)
-      showError(m)
-    } finally {
-      setSyncing(false)
-    }
-  }, [pushActivity, refreshAll, refreshSyncStatus, showError])
 
   const wipName = useMemo(() => {
     const w = projectCards.find((p) => p.status === 'WIP')
@@ -471,11 +400,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLeadDetailId((cur) => (cur === id ? null : cur))
       setLeads((prev) => {
         const next = prev.filter((l) => l.id !== id)
-        queueMicrotask(() => void persistLeadsToGithub(next))
+        queueMicrotask(() => void persistLeadsLocal(next))
         return next
       })
     },
-    [persistLeadsToGithub],
+    [persistLeadsLocal],
   )
 
   const createLead = useCallback(
@@ -506,7 +435,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ],
         }
         const next = [...prev, lead]
-        queueMicrotask(() => void persistLeadsToGithub(next))
+        queueMicrotask(() => void persistLeadsLocal(next))
         queueMicrotask(() =>
           pushActivity({
             category: 'LEAD',
@@ -516,7 +445,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return next
       })
     },
-    [persistLeadsToGithub, pushActivity],
+    [persistLeadsLocal, pushActivity],
   )
 
   const getProjectState = useCallback(
@@ -590,7 +519,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           category: 'PROJECT',
           message: `Saved ${slug}/state.md (local DB)`,
         })
-        void refreshSyncStatus()
       } catch (err) {
         const m =
           err instanceof RepoApiError ? err.message : String(err)
@@ -599,7 +527,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSyncing(false)
       }
     },
-    [pushActivity, refreshSyncStatus, showError],
+    [pushActivity, showError],
   )
 
   const executeWipSwap = useCallback(
@@ -626,7 +554,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           category: 'WIP',
           message: `WIP: ${activateSlug} active; ${parkSlug} parked`,
         })
-        void refreshSyncStatus()
       } catch (err) {
         const m =
           err instanceof RepoApiError ? err.message : String(err)
@@ -635,7 +562,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSyncing(false)
       }
     },
-    [loadProjectState, loadProjects, pushActivity, refreshSyncStatus, showError],
+    [loadProjectState, loadProjects, pushActivity, showError],
   )
 
   const prepareWipToggle = useCallback(
@@ -690,7 +617,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           category: 'INBOX',
           message: `New transmission logged`,
         })
-        void refreshSyncStatus()
       } catch (err) {
         const m =
           err instanceof RepoApiError ? err.message : String(err)
@@ -699,7 +625,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSyncing(false)
       }
     },
-    [pushActivity, refreshSyncStatus, showError],
+    [pushActivity, showError],
   )
 
   const retrySync = useCallback(() => {
@@ -739,11 +665,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     prepareWipToggle,
     executeWipSwap,
     refreshAll,
-    dirtyCount,
-    githubRemoteConfigured,
-    refreshSyncStatus,
-    pushToGithub,
-    pullFromGithub,
     activityLog,
     pushActivity,
     wipName,

@@ -22,10 +22,7 @@ export function Shell({ children }: { children: ReactNode }) {
     inboxTextAreaRef,
     closeProjectDetail,
     closeLeadDetail,
-    dirtyCount,
-    githubRemoteConfigured,
-    pushToGithub,
-    pullFromGithub,
+    refreshAll,
     syncing,
   } = useApp()
 
@@ -156,23 +153,14 @@ export function Shell({ children }: { children: ReactNode }) {
             }}
           >
             <SysLabel style={{ fontSize: 9, color: T.muted }}>
-              GH: {githubRemoteConfigured ? 'OK' : 'NO ENV'}
-            </SysLabel>
-            <SysLabel style={{ fontSize: 9, color: T.muted }}>
-              DIRTY: {dirtyCount}
+              STORE: SQLite (server)
             </SysLabel>
             <Btn
               inverted
-              onClick={() => void pullFromGithub()}
+              onClick={() => void refreshAll()}
               disabled={syncing}
             >
-              PULL
-            </Btn>
-            <Btn
-              onClick={() => void pushToGithub()}
-              disabled={syncing || !githubRemoteConfigured}
-            >
-              PUSH
+              RELOAD
             </Btn>
           </div>
           <div

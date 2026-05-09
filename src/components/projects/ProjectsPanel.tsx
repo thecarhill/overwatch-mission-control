@@ -126,7 +126,7 @@ export function ProjectsPanel() {
             PROJECTS
           </h1>
           <SysLabel style={{ color: T.muted, display: 'block', marginTop: 10 }}>
-            SOURCE: GITHUB.COM/OVERWATCH // {projectCards.length} REGISTERED
+            SOURCE: SERVER SQLITE // {projectCards.length} REGISTERED
           </SysLabel>
         </div>
       </div>

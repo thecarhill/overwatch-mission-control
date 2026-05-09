@@ -2,28 +2,41 @@ import Database from 'better-sqlite3'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
-export type FileRow = {
-  path: string
-  content: string
-  github_sha: string | null
-  dirty: number
-  updated_at: string
-}
-
 export function openDb(): Database.Database {
   const dataDir = process.env.DATA_DIR || '/data'
   if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true })
   const dbPath = process.env.SQLITE_PATH || join(dataDir, 'overwatch.db')
   const db = new Database(dbPath)
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS files (
       path TEXT PRIMARY KEY,
       content TEXT NOT NULL,
-      github_sha TEXT,
-      dirty INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_files_dirty ON files(dirty);
   `)
+
+  migrateLegacySchema(db)
   return db
+}
+
+/** Older installs had github_sha / dirty — collapse to path + content + updated_at */
+function migrateLegacySchema(db: Database.Database) {
+  const cols = db
+    .prepare(`PRAGMA table_info(files)`)
+    .all() as { name: string }[]
+  const names = new Set(cols.map((c) => c.name))
+  if (!names.has('github_sha') && !names.has('dirty')) return
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS files_migrated (
+      path TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    INSERT OR REPLACE INTO files_migrated (path, content, updated_at)
+    SELECT path, content, COALESCE(updated_at, datetime('now')) FROM files;
+    DROP TABLE files;
+    ALTER TABLE files_migrated RENAME TO files;
+  `)
 }
