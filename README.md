@@ -122,7 +122,7 @@ Portainer clona el repo y ejecuta **`docker compose build`**: no hay pull de GHC
 
 3. Si antes fallaba el deploy: el compose antiguo tenía **`networks.web.external: true`** sin crear la red `web` en el host → error típico. El `docker-compose.yml` actual ya no lo exige.
 
-Para Traefik + red `web`, usa **`docker-compose.traefik.yml`** como *Compose path* (y crea antes `docker network create web`).
+Para Traefik (misma red que n8n), usa **`docker-compose.traefik.yml`**: red Docker **`traefik`** externa (`docker network create traefik` si no existe), labels alineados con **certresolver `cloudflare`** y middlewares `secure-headers@file` / `redirect-to-https@file`. Opcional en Portainer: variable **`OVERWATCH_IMAGE`** si tu imagen GHCR es otro owner (por defecto `ghcr.io/themarbit/overwatch-mission-control:latest`).
 
 ### Cloudflare Tunnel + Zero Trust
 

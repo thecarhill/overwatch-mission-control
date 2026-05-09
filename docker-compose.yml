@@ -1,5 +1,5 @@
 # Portainer / despliegue genérico: imagen desde GHCR + puerto publicado.
-# (La versión con Traefik + red externa `web` está en docker-compose.traefik.yml)
+# (La versión con Traefik + red externa `traefik` está en docker-compose.traefik.yml)
 
 services:
   overwatch:
