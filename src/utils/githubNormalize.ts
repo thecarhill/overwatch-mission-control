@@ -7,7 +7,7 @@ export function normalizeGithubOwnerRepo(
   ownerIn: string,
   repoIn: string,
 ): { owner: string; repo: string } {
-  let owner = ownerIn.trim()
+  const owner = ownerIn.trim()
   let repo = repoIn.trim()
 
   const urlMatch = repo.match(

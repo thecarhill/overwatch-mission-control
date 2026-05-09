@@ -8,6 +8,7 @@ import { StatusDot } from '../primitives/StatusDot'
 import { SysLabel } from '../primitives/SysLabel'
 import { Clock } from '../primitives/Clock'
 import { SyncErrorBar } from './SyncErrorBar'
+import { Btn } from '../primitives/Btn'
 import { T } from '../../theme/tokens'
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -21,6 +22,11 @@ export function Shell({ children }: { children: ReactNode }) {
     inboxTextAreaRef,
     closeProjectDetail,
     closeLeadDetail,
+    dirtyCount,
+    githubRemoteConfigured,
+    pushToGithub,
+    pullFromGithub,
+    syncing,
   } = useApp()
 
   usePanelShortcut(setTab, inboxTextAreaRef, () => {
@@ -129,16 +135,46 @@ export function Shell({ children }: { children: ReactNode }) {
       >
         <header
           style={{
-            height: 56,
+            minHeight: 56,
             borderBottom: `1px solid ${T.border}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0 24px',
             flexShrink: 0,
+            gap: 12,
+            flexWrap: 'wrap',
           }}
         >
           <SysLabel style={{ fontSize: 11 }}>{pathMap[tab]}</SysLabel>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            <SysLabel style={{ fontSize: 9, color: T.muted }}>
+              GH: {githubRemoteConfigured ? 'OK' : 'NO ENV'}
+            </SysLabel>
+            <SysLabel style={{ fontSize: 9, color: T.muted }}>
+              DIRTY: {dirtyCount}
+            </SysLabel>
+            <Btn
+              inverted
+              onClick={() => void pullFromGithub()}
+              disabled={syncing}
+            >
+              PULL
+            </Btn>
+            <Btn
+              onClick={() => void pushToGithub()}
+              disabled={syncing || !githubRemoteConfigured}
+            >
+              PUSH
+            </Btn>
+          </div>
           <div
             style={{
               display: 'flex',

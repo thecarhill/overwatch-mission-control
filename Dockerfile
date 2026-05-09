@@ -1,22 +1,24 @@
-FROM node:20-alpine AS build
+# Node sirve API (/api) + SQLite + estático Vite (sin nginx).
+FROM node:20-alpine
 WORKDIR /app
+
+RUN apk add --no-cache python3 make g++
+
 COPY package*.json ./
 RUN npm ci
+
 COPY . .
 
-# Inyectadas en build (local: --build-arg o .env + herramienta; CI: GitHub Actions)
-ARG VITE_GITHUB_PAT=""
-ARG VITE_GITHUB_OWNER=""
-ARG VITE_GITHUB_REPO=""
-ARG VITE_GITHUB_BRANCH=main
-ENV VITE_GITHUB_PAT=$VITE_GITHUB_PAT
-ENV VITE_GITHUB_OWNER=$VITE_GITHUB_OWNER
-ENV VITE_GITHUB_REPO=$VITE_GITHUB_REPO
-ENV VITE_GITHUB_BRANCH=$VITE_GITHUB_BRANCH
+ARG VITE_API_BASE=""
+ENV VITE_API_BASE=$VITE_API_BASE
 
 RUN npm run build
 
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV DATA_DIR=/data
+
+EXPOSE 8080
+VOLUME ["/data"]
+
+CMD ["node", "dist-server/index.js"]

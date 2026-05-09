@@ -6,7 +6,6 @@ import {
   readStoredGithub,
   writeStoredGithub,
 } from '../../services/runtimeGithubConfig'
-import { verifyGitHubPat } from '../../services/github'
 import { Btn } from '../primitives/Btn'
 import { Rule } from '../primitives/Rule'
 import { SysLabel } from '../primitives/SysLabel'
@@ -44,11 +43,20 @@ export function ConfigPanel() {
 
   const runPatCheck = async () => {
     setPatStatus({ state: 'loading' })
-    const r = await verifyGitHubPat()
-    if (r.ok && r.login) {
-      setPatStatus({ state: 'ok', login: r.login })
-    } else {
-      setPatStatus({ state: 'err', msg: r.error ?? 'Unknown error' })
+    try {
+      const res = await fetch('/api/github/verify')
+      const j = (await res.json()) as {
+        ok?: boolean
+        login?: string
+        error?: string
+      }
+      if (j.ok && j.login) setPatStatus({ state: 'ok', login: j.login })
+      else setPatStatus({ state: 'err', msg: j.error ?? 'Verify failed' })
+    } catch (e) {
+      setPatStatus({
+        state: 'err',
+        msg: e instanceof Error ? e.message : String(e),
+      })
     }
   }
 
@@ -227,8 +235,8 @@ export function ConfigPanel() {
             }}
           >
             <SysLabel style={{ color: 'inherit', fontSize: 10 }}>
-              CI/CD BAKES VITE_* INTO THE BUNDLE — BELOW OVERRIDES ONLY THIS BROWSER (
-              LOCALSTORAGE )
+              DOCKER: DATOS EN SQLITE EN /DATA — GITHUB VA CON PULL/PUSH EN CABECERA. ABAJO:
+              OVERRIDES OPCIONALES DEL NAVEGADOR ( LOCALSTORAGE )
             </SysLabel>
           </div>
           {envRows.map((row) => (
@@ -343,9 +351,8 @@ export function ConfigPanel() {
           }}
         >
           <p style={{ margin: '0 0 16px', fontSize: 13, lineHeight: 1.6, color: T.muted }}>
-            Calls{' '}
-            <span style={{ fontFamily: T.mono, fontSize: 12 }}>GET /user</span> with the{' '}
-            <strong>effective</strong> PAT (build or browser override). Token value is never shown.
+            Usa el PAT del servidor (<span style={{ fontFamily: T.mono, fontSize: 12 }}>GITHUB_TOKEN</span>{' '}
+            en Docker). No expone el token.
           </p>
           <Btn inverted onClick={() => void runPatCheck()} disabled={patStatus.state === 'loading'}>
             {patStatus.state === 'loading' ? 'CHECKING...' : 'VERIFY PAT'}
